@@ -84,7 +84,61 @@ public class JackTokenizer {
 	 * Initially, there is no current token.
 	 */
 	public void advance() throws IOException {
+		if (!hasMoreTokens()) {
+			System.err.println("Error: Must not invoke advance() when there are no more tokens!");
+			return;
+		}
+		
 		_currentTokenIndex++;
+		_currentToken = _tokenList.get(_currentTokenIndex);
+		
+		if (
+			_currentToken.equals("class") || _currentToken.equals("constructor") || _currentToken.equals("function") ||
+			_currentToken.equals("method") || _currentToken.equals("field") || _currentToken.equals("static") ||
+			_currentToken.equals("var") || _currentToken.equals("int") || _currentToken.equals("char") ||
+			_currentToken.equals("boolean") || _currentToken.equals("void") || _currentToken.equals("true") ||
+			_currentToken.equals("false") || _currentToken.equals("null") || _currentToken.equals("this") ||
+			_currentToken.equals("let") || _currentToken.equals("do") || _currentToken.equals("if") ||
+			_currentToken.equals("else") || _currentToken.equals("while") || _currentToken.equals("return")
+		) {
+			_tokenType = TokenType.KEYWORD;
+		}
+		else if (
+			_currentToken.equals("{") || _currentToken.equals("}") || _currentToken.equals("(") ||
+			_currentToken.equals(")") || _currentToken.equals("[") || _currentToken.equals("]") ||
+			_currentToken.equals(".") || _currentToken.equals(",") || _currentToken.equals(";") ||
+			_currentToken.equals("+") || _currentToken.equals("-") || _currentToken.equals("*") ||
+			_currentToken.equals("/") || _currentToken.equals("&") || _currentToken.equals("|") ||
+			_currentToken.equals("<") || _currentToken.equals(">") || _currentToken.equals("=") ||
+			_currentToken.equals("~")
+		) {
+			_tokenType = TokenType.SYMBOL;
+		}
+		else if (_currentToken.matches("[0-9]+")) {
+			_tokenType = TokenType.INT_CONST;
+		}
+		else if (_currentToken.matches("\".*\"")) {
+			_tokenType = TokenType.STRING_CONST;
+		}
+		else if (_currentToken.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
+			_tokenType = TokenType.IDENTIFIER;
+		}
+		else {
+			_tokenType = TokenType.UNKNOWN;
+		}
+	}
+	
+	/*
+	 * Gets the previous token from the input and makes it the current token.
+	 * Should only be called if _currentToken index is greater than 0.
+	 */
+	public void retreat() throws IOException {
+		if (_currentTokenIndex < 1) {
+			System.err.println("Error: Must not invoke when current token is less than 1!");
+			return;
+		}
+		
+		_currentTokenIndex--;
 		_currentToken = _tokenList.get(_currentTokenIndex);
 		
 		if (
@@ -213,7 +267,7 @@ public class JackTokenizer {
 	 * Should be called only when tokenType() is STRING_CONST.
 	 */
 	public String stringVal() {
-		return _currentToken;
+		return _currentToken.replaceAll("\"", "");
 	}
 	
 	public void writeXML() throws IOException {

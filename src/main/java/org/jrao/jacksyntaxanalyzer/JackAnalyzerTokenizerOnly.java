@@ -7,7 +7,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-public class JackAnalyzer {
+public class JackAnalyzerTokenizerOnly {
 
 	public static void main(String[] args) {
         System.out.println("Welcome to org.jrao.jacksyntaxanalyzer!\n");
@@ -42,14 +42,15 @@ public class JackAnalyzer {
         }
         
         for (File jackFile : jackFiles) {
-        	/*
 			JackTokenizer tokenizer = null;
 			try {
 				tokenizer = new JackTokenizer(jackFile);
 			}
 			catch (IOException ioe) {
 				System.err.println("Failed to create tokenizer!");
+				
 				ioe.printStackTrace();
+				
 				return;
 			}
 			
@@ -65,38 +66,7 @@ public class JackAnalyzer {
 				tokenizer.close();
 			}
 			catch (IOException ioe) {
-				System.err.println("Failed to close tokenizer!");
-			}
-			*/
-			String jackFilePathString = jackFile.getAbsolutePath();
-			String outputFilePathString = jackFilePathString.concat(".vm");
-			File outputFile = new File(outputFilePathString);
-			
-			CompilationEngine compilationEngine = null;
-			try {
-				compilationEngine = new CompilationEngine(jackFile, outputFile);
-			}
-			catch (IOException ioe) {
-				System.err.println("Failed to create tokenizer!");
-				ioe.printStackTrace();
-				return;
-			}
-
-			try {
-				compilationEngine.compileClass();
-			}
-			catch (IOException ioe) {
-				System.err.println("Failed to compile class!");
-				ioe.printStackTrace();
-				return;
-			}
-			
-			try {
-				compilationEngine.close();
-			}
-			catch (IOException ioe) {
-				System.err.println("Failed to close compilation engine!");
-				ioe.printStackTrace();
+				System.err.println("Failed to close writer!");
 			}
         }
 	}

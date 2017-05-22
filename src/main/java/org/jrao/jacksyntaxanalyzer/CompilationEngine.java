@@ -6,6 +6,21 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class CompilationEngine {
+	
+	public static String getEscapedSymbol(char symbol) {
+		if (symbol == '&') {
+			return "&amp;";
+		}
+		else if (symbol == '<') {
+			return "&lt;";
+		}
+		else if (symbol == '>') {
+			return "&gt;";
+		}
+		else {
+			return String.valueOf(symbol);
+		}
+	}
 
 	public CompilationEngine(File inputFile, File outputFile) throws IOException {
 		_bw = new BufferedWriter(new FileWriter(outputFile));
@@ -768,7 +783,8 @@ public class CompilationEngine {
 				System.err.println("Error compiling op term!");
 				return;
 			}
-			_bw.write("<symbol> " + _tokenizer.symbol() + " </symbol>\n");
+			String symbolString = getEscapedSymbol(_tokenizer.symbol());
+			_bw.write("<symbol> " + symbolString + " </symbol>\n");
 			
 			compileTerm();
 			

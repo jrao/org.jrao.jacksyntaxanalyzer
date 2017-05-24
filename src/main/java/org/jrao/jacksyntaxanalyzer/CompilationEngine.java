@@ -7,21 +7,6 @@ import java.io.IOException;
 
 public class CompilationEngine {
 	
-	public static String getEscapedSymbol(char symbol) {
-		if (symbol == '&') {
-			return "&amp;";
-		}
-		else if (symbol == '<') {
-			return "&lt;";
-		}
-		else if (symbol == '>') {
-			return "&gt;";
-		}
-		else {
-			return String.valueOf(symbol);
-		}
-	}
-
 	public CompilationEngine(File inputFile, File outputFile) throws IOException {
 		_bw = new BufferedWriter(new FileWriter(outputFile));
 		_tokenizer = new JackTokenizer(inputFile);
@@ -37,12 +22,7 @@ public class CompilationEngine {
 	public void compileClass() throws IOException {
 		_bw.write("<class>\n");
 
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.KEYWORD) || !_tokenizer.keyWord().equals(KeyWord.CLASS)) {
-			System.err.println("Error compiling class!");
-			return;
-		}
-		_bw.write("<keyword> class </keyword>\n");
+		eatKeyword(KeyWord.CLASS);
 
 		_tokenizer.advance();
 		if (!_tokenizer.tokenType().equals(TokenType.IDENTIFIER)) {
@@ -51,22 +31,12 @@ public class CompilationEngine {
 		}
 		_bw.write("<identifier> " + _tokenizer.identifier() + " </identifier>\n");
 		
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() !='{') {
-			System.err.println("Error compiling class!");
-			return;
-		}
-		_bw.write("<symbol> " + '{' + " </symbol>\n");
+		eatSymbol('{');
 		
 		compileClassVarDec();
 		compileSubroutine();
 		
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() !='}') {
-			System.err.println("Error compiling class!");
-			return;
-		}
-		_bw.write("<symbol> " + '}' + " </symbol>\n");
+		eatSymbol('}');
 		
 		if (_tokenizer.hasMoreTokens()) {
 			System.err.println("Error: There should be no more tokens!");
@@ -210,21 +180,11 @@ public class CompilationEngine {
 		_bw.write("<identifier> " + _tokenizer.identifier()  + " </identifier>\n");
 		
 		// Handle parameter list
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != '(') {
-			System.err.println("Error compiling subroutines!");
-			return;
-		}
-		_bw.write("<symbol> " + '('  + " </symbol>\n");
+		eatSymbol('(');
 		
 		compileParameterList();
 
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != ')') {
-			System.err.println("Error compiling subroutines!");
-			return;
-		}
-		_bw.write("<symbol> " + ')'  + " </symbol>\n");
+		eatSymbol(')');
 		
 		compileSubroutineBody();
 		
@@ -236,22 +196,12 @@ public class CompilationEngine {
 	private void compileSubroutineBody() throws IOException {
 		_bw.write("<subroutineBody>\n");
 		
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != '{') {
-			System.err.println("Error compiling subroutine body!");
-			return;
-		}
-		_bw.write("<symbol> " + '{'  + " </symbol>\n");
+		eatSymbol('{');
 
 		handleMultipleVariableDeclarations();
 		compileStatements();
 
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != '}') {
-			System.err.println("Error compiling subroutine body!");
-			return;
-		}
-		_bw.write("<symbol> " + '}'  + " </symbol>\n");
+		eatSymbol('}');
 
 		_bw.write("</subroutineBody>\n");
 	}
@@ -483,21 +433,11 @@ public class CompilationEngine {
 	public void compileDo() throws IOException {
 		_bw.write("<doStatement>\n");
 
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.KEYWORD) || _tokenizer.keyWord() != KeyWord.DO) {
-			System.err.println("Error compiling Do!");
-			return;
-		}
-		_bw.write("<keyword> do </keyword>\n");
+		eatKeyword(KeyWord.DO);
 		
 		compileSubroutineCall();
 		
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != ';') {
-			System.err.println("Error compiling Do!");
-			return;
-		}
-		_bw.write("<symbol> " + ';' + "</symbol>\n");
+		eatSymbol(';');
 
 		_bw.write("</doStatement>\n");
 	}
@@ -519,12 +459,7 @@ public class CompilationEngine {
 			
 			compileExpressionList();
 
-			_tokenizer.advance();
-			if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != ')') {
-				System.err.println("Error compiling subroutine call!");
-				return;
-			}
-			_bw.write("<symbol> " + ')' + " </symbol>\n");
+			eatSymbol(')');
 		}
 		else {
 			_bw.write("<identifier> " + varName + " </identifier>\n");
@@ -537,33 +472,18 @@ public class CompilationEngine {
 			}
 			_bw.write("<identifier> " + _tokenizer.identifier() + " </identifier>\n");
 
-			_tokenizer.advance();
-			if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) && _tokenizer.symbol() != '(') {
-				System.err.println("Error compiling subroutine call!");
-				return;
-			}
-			_bw.write("<symbol> " + '(' + " </symbol>\n");
+			eatSymbol('(');
 			
 			compileExpressionList();
 
-			_tokenizer.advance();
-			if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != ')') {
-				System.err.println("Error compiling subroutine call!");
-				return;
-			}
-			_bw.write("<symbol> " + ')' + " </symbol>\n");
+			eatSymbol(')');
 		}
 	}
 
 	public void compileLet() throws IOException {
 		_bw.write("<letStatement>\n");
 
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.KEYWORD) || _tokenizer.keyWord() != KeyWord.LET) {
-			System.err.println("Error compiling Let!");
-			return;
-		}
-		_bw.write("<keyword> let </keyword>\n");
+		eatKeyword(KeyWord.LET);
 
 		// handle varName
 		_tokenizer.advance();
@@ -576,22 +496,12 @@ public class CompilationEngine {
 		handleOptionalExpressionInSquareBrackets();
 
 		// handle =
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != '=') {
-			System.err.println("Error compiling Let!");
-			return;
-		}
-		_bw.write("<symbol> " + '=' + " </symbol>\n");
+		eatSymbol('=');
 		
 		compileExpression();
 
 		// handle ;
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != ';') {
-			System.err.println("Error compiling Let!");
-			return;
-		}
-		_bw.write("<symbol> " + ';' + " </symbol>\n");
+		eatSymbol(';');
 		
 		_bw.write("</letStatement>\n");
 	}
@@ -606,55 +516,25 @@ public class CompilationEngine {
 		
 		compileExpression();
 
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != ']') {
-			System.err.println("Error handling option expression in square brackets!");
-			return;
-		}
-		_bw.write("<symbol> " + ']' + " </symbol>\n");
+		eatSymbol(']');
 	}
 
 	public void compileWhile() throws IOException {
 		_bw.write("<whileStatement>\n");
 
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.KEYWORD) || _tokenizer.keyWord() != KeyWord.WHILE) {
-			System.err.println("Error compiling While!");
-			return;
-		}
-		_bw.write("<keyword> while </keyword>\n");
+		eatKeyword(KeyWord.WHILE);
 		
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != '(') {
-			System.err.println("Error compiling While!");
-			return;
-		}
-		_bw.write("<symbol> " + '(' + " </symbol>\n");
+		eatSymbol('(');
 		
 		compileExpression();
 		
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != ')') {
-			System.err.println("Error compiling While!");
-			return;
-		}
-		_bw.write("<symbol> " + ')' + " </symbol>\n");
+		eatSymbol(')');
 		
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != '{') {
-			System.err.println("Error compiling While!");
-			return;
-		}
-		_bw.write("<symbol> " + '{' + " </symbol>\n");
+		eatSymbol('{');
 
 		compileStatements();
 
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != '}') {
-			System.err.println("Error compiling While!");
-			return;
-		}
-		_bw.write("<symbol> " + '}' + " </symbol>\n");
+		eatSymbol('}');
 
 		_bw.write("</whileStatement>\n");
 	}
@@ -662,12 +542,7 @@ public class CompilationEngine {
 	public void compileReturn() throws IOException {
 		_bw.write("<returnStatement>\n");
 
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.KEYWORD) || _tokenizer.keyWord() != KeyWord.RETURN) {
-			System.err.println("Error compiling Return!");
-			return;
-		}
-		_bw.write("<keyword> return </keyword>\n");
+		eatKeyword(KeyWord.RETURN);
 
 		_tokenizer.advance();
 		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != ';') {
@@ -685,64 +560,29 @@ public class CompilationEngine {
 	public void compileIf() throws IOException {
 		_bw.write("<ifStatement>\n");
 
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.KEYWORD) || _tokenizer.keyWord() != KeyWord.IF) {
-			System.err.println("Error compiling If!");
-			return;
-		}
-		_bw.write("<keyword> if </keyword>\n");
+		eatKeyword(KeyWord.IF);
 
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != '(') {
-			System.err.println("Error compiling If!");
-			return;
-		}
-		_bw.write("<symbol> " + '(' + " </symbol>\n");
+		eatSymbol('(');
 		
 		compileExpression();
 
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != ')') {
-			System.err.println("Error compiling If!");
-			return;
-		}
-		_bw.write("<symbol> " + ')' + " </symbol>\n");
+		eatSymbol(')');
 		
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != '{') {
-			System.err.println("Error compiling If!");
-			return;
-		}
-		_bw.write("<symbol> " + '{' + " </symbol>\n");
+		eatSymbol('{');
 		
 		compileStatements();
 		
-		_tokenizer.advance();
-		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != '}') {
-			System.err.println("Error compiling If!");
-			return;
-		}
-		_bw.write("<symbol> " + '}' + " </symbol>\n");
+		eatSymbol('}');
 		
 		_tokenizer.advance();
 		if (_tokenizer.tokenType().equals(TokenType.KEYWORD) && _tokenizer.keyWord() == KeyWord.ELSE) {
 			_bw.write("<keyword> else </keyword>\n");
 
-			_tokenizer.advance();
-			if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != '{') {
-				System.err.println("Error compiling Else!");
-				return;
-			}
-			_bw.write("<symbol> " + '{' + " </symbol>\n");
+			eatSymbol('{');
 			
 			compileStatements();
 
-			_tokenizer.advance();
-			if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != '}') {
-				System.err.println("Error compiling Else!");
-				return;
-			}
-			_bw.write("<symbol> " + '}' + " </symbol>\n");
+			eatSymbol('}');
 		}
 		else {
 			_tokenizer.retreat();
@@ -827,12 +667,7 @@ public class CompilationEngine {
 				
 				compileExpression();
 
-				_tokenizer.advance();
-				if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != ']') {
-					System.err.println("Error compiling array access!");
-					return;
-				}
-				_bw.write("<symbol> " + ']' + " </symbol>\n");
+				eatSymbol(']');
 			}
 			else if (_tokenizer.tokenType() == TokenType.SYMBOL && (_tokenizer.symbol() == '(' || _tokenizer.symbol() == '.')) {
 				if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '(') {
@@ -841,12 +676,7 @@ public class CompilationEngine {
 					
 					compileExpressionList();
 
-					_tokenizer.advance();
-					if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != ')') {
-						System.err.println("Error compiling subroutine call!");
-						return;
-					}
-					_bw.write("<symbol> " + ')' + " </symbol>\n");
+					eatSymbol(')');
 				}
 				else if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '.') {
 					_bw.write("<identifier> " + varName + " </identifier>\n");
@@ -859,21 +689,11 @@ public class CompilationEngine {
 					}
 					_bw.write("<identifier> " + _tokenizer.identifier() + " </identifier>\n");
 
-					_tokenizer.advance();
-					if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) && _tokenizer.symbol() != '(') {
-						System.err.println("Error compiling subroutine call!");
-						return;
-					}
-					_bw.write("<symbol> " + '(' + " </symbol>\n");
+					eatSymbol('(');
 					
 					compileExpressionList();
 
-					_tokenizer.advance();
-					if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != ')') {
-						System.err.println("Error compiling subroutine call!");
-						return;
-					}
-					_bw.write("<symbol> " + ')' + " </symbol>\n");
+					eatSymbol(')');
 				}
 				else {
 					System.err.println("Error compiling subroutine call!");
@@ -889,11 +709,7 @@ public class CompilationEngine {
 			
 			compileExpression();
 
-			_tokenizer.advance();
-			if (!(_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == ')')) {
-				System.err.println("Error compiling term of the form '('expression')'");
-			}
-			_bw.write("<symbol> " + ')' + " </symbol>\n");
+			eatSymbol(')');
 		}
 		else if (_tokenizer.tokenType() == TokenType.SYMBOL
 				&& (_tokenizer.symbol() == '-' || _tokenizer.symbol() == '~')) {
@@ -966,6 +782,39 @@ public class CompilationEngine {
 				semiColonFound = true;
 			}
 		}
+	}
+	
+	private String getEscapedSymbol(char symbol) {
+		if (symbol == '&') {
+			return "&amp;";
+		}
+		else if (symbol == '<') {
+			return "&lt;";
+		}
+		else if (symbol == '>') {
+			return "&gt;";
+		}
+		else {
+			return String.valueOf(symbol);
+		}
+	}
+
+	private void eatKeyword(KeyWord keyword) throws IOException {
+		_tokenizer.advance();
+		if (!_tokenizer.tokenType().equals(TokenType.KEYWORD) || !_tokenizer.keyWord().equals(keyword)) {
+			System.err.println("Error eating keyword " + keyword + "!");
+			return;
+		}
+		_bw.write("<keyword> " + keyword.toString().toLowerCase() + " </keyword>\n");
+	}
+
+	private void eatSymbol(char symbol) throws IOException {
+		_tokenizer.advance();
+		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != symbol) {
+			System.err.println("Error eating symbol " + symbol + "!");
+			return;
+		}
+		_bw.write("<symbol> " + symbol + " </symbol>\n");
 	}
 
 	private BufferedWriter _bw;

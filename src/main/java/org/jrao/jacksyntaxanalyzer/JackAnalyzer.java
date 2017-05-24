@@ -42,34 +42,8 @@ public class JackAnalyzer {
         }
         
         for (File jackFile : jackFiles) {
-        	/*
-			JackTokenizer tokenizer = null;
-			try {
-				tokenizer = new JackTokenizer(jackFile);
-			}
-			catch (IOException ioe) {
-				System.err.println("Failed to create tokenizer!");
-				ioe.printStackTrace();
-				return;
-			}
-			
-			try {
-				tokenizer.writeXML();
-				System.out.println("Wrote XML!");
-			}
-			catch (IOException ieo) {
-				System.err.println("Error writing XML!");
-			}
-			
-			try {
-				tokenizer.close();
-			}
-			catch (IOException ioe) {
-				System.err.println("Failed to close tokenizer!");
-			}
-			*/
 			String jackFilePathString = jackFile.getAbsolutePath();
-			String outputFilePathString = jackFilePathString.concat(".vm");
+			String outputFilePathString = jackFilePathString.concat(".xml");
 			File outputFile = new File(outputFilePathString);
 			
 			CompilationEngine compilationEngine = null;

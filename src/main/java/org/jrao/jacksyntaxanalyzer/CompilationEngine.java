@@ -7,9 +7,19 @@ import java.io.IOException;
 
 public class CompilationEngine {
 	
+	public int nextStaticNumber;
+	public int nextFieldNumber;
+	public int nextArgNumber;
+	public int nextVarNumber;
+	
 	public CompilationEngine(File inputFile, File outputFile) throws IOException {
 		_bw = new BufferedWriter(new FileWriter(outputFile));
 		_tokenizer = new JackTokenizer(inputFile);
+		
+		nextStaticNumber = 0;
+		nextFieldNumber = 0;
+		nextArgNumber = 0;
+		nextVarNumber = 0;
 	}
 	
 	public void close() throws IOException {
@@ -29,7 +39,7 @@ public class CompilationEngine {
 			System.err.println("Error compiling class!");
 			return;
 		}
-		_bw.write("<identifier> " + _tokenizer.identifier() + " </identifier>\n");
+		_bw.write("<identifier category=\"class\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
 		
 		eatSymbol('{');
 		
@@ -71,11 +81,14 @@ public class CompilationEngine {
 			System.err.println("Error compiling class variables declaration!");
 			return;
 		}
+		Kind kind = Kind.NONE;
 		if (_tokenizer.keyWord().equals(KeyWord.STATIC)) {
 			_bw.write("<keyword> static </keyword>\n");
+			kind = Kind.STATIC;
 		}
 		else {
 			_bw.write("<keyword> field </keyword>\n");
+			kind = Kind.FIELD;
 		}
 		
 		// Handle type
@@ -102,7 +115,7 @@ public class CompilationEngine {
 			}
 		}
 		else {
-			_bw.write("<identifier> " + _tokenizer.identifier()  + " </identifier>\n");
+			_bw.write("<identifier category=\"class\" definition=\"false\"> " + _tokenizer.identifier()  + " </identifier>\n");
 		}
 
 		// Handle varName
@@ -111,10 +124,20 @@ public class CompilationEngine {
 			System.err.println("Error compiling class variables declaration!");
 			return;
 		}
-		_bw.write("<identifier> " + _tokenizer.identifier()  + " </identifier>\n");
+		if (kind == Kind.STATIC) {
+			_bw.write("<identifier category=\"static\" number=\"" + nextStaticNumber + "\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+			nextStaticNumber++;
+		}
+		else if (kind == Kind.FIELD) {
+			_bw.write("<identifier category=\"field\" number=\"" + nextFieldNumber + "\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+			nextFieldNumber++;
+		}
+		else {
+			throw new IllegalStateException();
+		}
 		
 		// Handle ',' or ';'
-		handleVariableDeclarationList();
+		handleVariableDeclarationList(kind);
 
 		_bw.write("</classVarDec>\n");
 		
@@ -760,7 +783,7 @@ public class CompilationEngine {
 	}
 	
 	// to invoke this method, next token must a comma or a semicolon symbol
-	private void handleVariableDeclarationList() throws IOException {
+	private void handleVariableDeclarationList(Kind kind) throws IOException {
 		boolean semiColonFound = false;
 		while (!semiColonFound) {
 			_tokenizer.advance();
@@ -776,7 +799,25 @@ public class CompilationEngine {
 					System.err.println("Error in handleMultipleVariableDeclarations!");
 					return;
 				}
-				_bw.write("<identifier> " + _tokenizer.identifier() + " </identifier>\n");
+				if (kind == Kind.STATIC) {
+					_bw.write("<identifier category=\"static\" number=\"" + nextStaticNumber + "\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
+					nextStaticNumber++;
+				}
+				else if (kind == Kind.FIELD) {
+					_bw.write("<identifier category=\"field\" number=\"" + nextFieldNumber + "\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
+					nextStaticNumber++;
+				}
+				else if (kind == Kind.VAR) {
+					_bw.write("<identifier category=\"var\" number=\"" + nextVarNumber + "\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
+					nextVarNumber++;
+				}
+				else if (kind == Kind.ARG) {
+					_bw.write("<identifier category=\"arg\" number=\"" + nextArgNumber + "\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
+					nextArgNumber++;
+				}
+				else {
+					throw new IllegalArgumentException();
+				}
 			}
 			else {
 				semiColonFound = true;

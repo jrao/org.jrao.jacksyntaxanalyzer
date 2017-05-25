@@ -24,18 +24,51 @@ public class SymbolTable {
 
 	/*
 	 * Defines a new identifier of the given name, type, and kind and assigns it
-	 * a running index. STATIC and FIELD kinds have a class scope, while ARG and
-	 * VAR identifiers have a subroutine scope.
+	 * a running index. STATIC and FIELD identifiers have a class scope, while
+	 * ARG and VAR identifiers have a subroutine scope.
 	 */
 	public void define(String name, String type, Kind kind) {
-
+		SymbolTableRow row = new SymbolTableRow(name, type, kind, varCount(kind));
+		if (kind == Kind.STATIC) {
+			_classSymbolTable.put(name, row);
+			_nextStaticNumber++;
+		}
+		else if (kind == Kind.FIELD) {
+			_classSymbolTable.put(name, row);
+			_nextFieldNumber++;
+		}
+		else if (kind == Kind.ARG) {
+			_subroutineSymbolTable.put(name, row);
+			_nextArgNumber++;
+		}
+		else if (kind == Kind.VAR) {
+			_subroutineSymbolTable.put(name, row);
+			_nextVarNumber++;
+		}
+		else {
+			throw new IllegalArgumentException("kind must be one of STATIC, FIELD, ARG, or VAR!");
+		}
 	}
 	
 	/*
 	 * Returns the number of variables of the given kind already defined in the current scope
 	 */
 	public int varCount(Kind kind) {
-		return 0;
+		if (kind == Kind.STATIC) {
+			return _nextStaticNumber;
+		}
+		else if (kind == Kind.FIELD) {
+			return _nextFieldNumber;
+		}
+		else if (kind == Kind.ARG) {
+			return _nextArgNumber;
+		}
+		else if (kind == Kind.VAR) {
+			return _nextVarNumber;
+		}
+		else {
+			throw new IllegalArgumentException("kind must be one of STATIC, FIELD, ARG, or VAR!");
+		}
 	}
 	
 	/*
@@ -43,6 +76,14 @@ public class SymbolTable {
 	 * identifier is unknown in the current scope, return NONE.
 	 */
 	public Kind kindOf(String name) {
+		if (_subroutineSymbolTable.containsKey(name)) {
+			SymbolTableRow row = (SymbolTableRow) _subroutineSymbolTable.get(name);
+			return row.getKind();
+		}
+		else if (_classSymbolTable.containsKey(name)) {
+			SymbolTableRow row = (SymbolTableRow) _classSymbolTable.get(name);
+			return row.getKind();
+		}
 		return Kind.NONE;
 	}
 	
@@ -50,6 +91,14 @@ public class SymbolTable {
 	 * Returns the type of the named identifier in the current scope
 	 */
 	public String typeOf(String name) {
+		if (_subroutineSymbolTable.containsKey(name)) {
+			SymbolTableRow row = (SymbolTableRow) _subroutineSymbolTable.get(name);
+			return row.getType();
+		}
+		else if (_classSymbolTable.containsKey(name)) {
+			SymbolTableRow row = (SymbolTableRow) _classSymbolTable.get(name);
+			return row.getType();
+		}
 		return "";
 	}
 	
@@ -57,7 +106,15 @@ public class SymbolTable {
 	 * Returns the index assigned to the named identifier
 	 */
 	public int indexOf(String name) {
-		return 0;
+		if (_subroutineSymbolTable.containsKey(name)) {
+			SymbolTableRow row = (SymbolTableRow) _subroutineSymbolTable.get(name);
+			return row.getNumber();
+		}
+		else if (_classSymbolTable.containsKey(name)) {
+			SymbolTableRow row = (SymbolTableRow) _classSymbolTable.get(name);
+			return row.getNumber();
+		}
+		return -1;
 	}
 	
 	public void incrementStaticNumber() {

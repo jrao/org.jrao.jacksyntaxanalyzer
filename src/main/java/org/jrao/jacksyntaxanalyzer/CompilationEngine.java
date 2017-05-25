@@ -150,6 +150,10 @@ public class CompilationEngine {
 		// Check for end of class
 		if (_tokenizer.tokenType().equals(TokenType.SYMBOL) && _tokenizer.symbol() == '}') {
 			_tokenizer.retreat();
+			
+			nextArgNumber = 0;
+			nextVarNumber = 0;
+			
 			return;
 		}
 		
@@ -191,7 +195,7 @@ public class CompilationEngine {
 			}
 		}
 		else {
-			_bw.write("<identifier> " + _tokenizer.identifier()  + " </identifier>\n");
+			_bw.write("<identifier category=\"class\" definition=\"false\"" + "> " + _tokenizer.identifier()  + " </identifier>\n");
 		}
 		
 		// Handle subroutine name
@@ -200,7 +204,7 @@ public class CompilationEngine {
 			System.err.println("Error compiling subroutines!");
 			return;
 		}
-		_bw.write("<identifier> " + _tokenizer.identifier()  + " </identifier>\n");
+		_bw.write("<identifier category=\"subroutine\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
 		
 		// Handle parameter list
 		eatSymbol('(');
@@ -279,7 +283,7 @@ public class CompilationEngine {
 			}
 		}
 		else {
-			_bw.write("<identifier> " + _tokenizer.identifier()  + " </identifier>\n");
+			_bw.write("<identifier category=\"class\" definition=\"false\"" + "> " + _tokenizer.identifier()  + " </identifier>\n");
 		}
 
 		// handle varName
@@ -288,7 +292,8 @@ public class CompilationEngine {
 			System.err.println("Error compiling parameter list!");
 			return;
 		}
-		_bw.write("<identifier> " + _tokenizer.identifier()  + " </identifier>\n");
+		_bw.write("<identifier category=\"argument\" number=\"" + nextArgNumber + " definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+		nextArgNumber++;
 		
 		handleMultipleParameters();
 
@@ -331,7 +336,7 @@ public class CompilationEngine {
 					}
 				}
 				else {
-					_bw.write("<identifier> " + _tokenizer.identifier()  + " </identifier>\n");
+					_bw.write("<identifier category=\"class\" definition=\"false\"" + "> " + _tokenizer.identifier()  + " </identifier>\n");
 				}
 
 				// handle varName
@@ -340,7 +345,8 @@ public class CompilationEngine {
 					System.err.println("Error compiling multiple parameters in parameter list!");
 					return;
 				}
-				_bw.write("<identifier> " + _tokenizer.identifier()  + " </identifier>\n");
+				_bw.write("<identifier category=\"argument\" number=\"" + nextArgNumber + " definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+				nextArgNumber++;
 			}
 			else {
 				endParenthesisFound = true;
@@ -358,6 +364,7 @@ public class CompilationEngine {
 			return;
 		}
 		_bw.write("<keyword> " + "var" + "</keyword>\n");
+		Kind kind = Kind.VAR;
 
 		// handle type
 		_tokenizer.advance();
@@ -383,7 +390,7 @@ public class CompilationEngine {
 			}
 		}
 		else {
-			_bw.write("<identifier> " + _tokenizer.identifier()  + " </identifier>\n");
+			_bw.write("<identifier category=\"class\" definition=\"false\"" + "> " + _tokenizer.identifier()  + " </identifier>\n");
 		}
 
 		// Handle varName
@@ -392,10 +399,11 @@ public class CompilationEngine {
 			System.err.println("Error compiling class variables declaration!");
 			return;
 		}
-		_bw.write("<identifier> " + _tokenizer.identifier()  + " </identifier>\n");
+		_bw.write("<identifier category=\"var\" number=\"" + nextVarNumber + " definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+		nextVarNumber++;
 		
 		// Handle ',' or ';'
-		handleVariableDeclarationList();
+		handleVariableDeclarationList(kind);
 
 		_bw.write("</varDec>\n");
 	}
@@ -477,7 +485,7 @@ public class CompilationEngine {
 			System.err.println("Error compiling subroutine call!");
 		}
 		if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '(') {
-			_bw.write("<identifier> " + varName + " </identifier>\n");
+			_bw.write("<identifier category=\"subroutine\" definition=\"false\"> " + varName + " </identifier>\n");
 			_bw.write("<symbol> " + '(' + " </symbol>\n");
 			
 			compileExpressionList();
@@ -485,7 +493,7 @@ public class CompilationEngine {
 			eatSymbol(')');
 		}
 		else {
-			_bw.write("<identifier> " + varName + " </identifier>\n");
+			_bw.write("<identifier category=\"class\" definition=\"false\"> " + varName + " </identifier>\n");
 			_bw.write("<symbol> " + '.' + " </symbol>\n");
 			
 			_tokenizer.advance();
@@ -493,7 +501,7 @@ public class CompilationEngine {
 				System.err.println("Error compiling subroutine call!");
 				return;
 			}
-			_bw.write("<identifier> " + _tokenizer.identifier() + " </identifier>\n");
+			_bw.write("<identifier category=\"subroutine\" definition=\"false\"> " + _tokenizer.identifier() + " </identifier>\n");
 
 			eatSymbol('(');
 			
@@ -514,6 +522,7 @@ public class CompilationEngine {
 			System.err.println("Error compiling Let!");
 			return;
 		}
+		// look up information to add to this identifier tag in the symbol table
 		_bw.write("<identifier> " + _tokenizer.identifier()  + " </identifier>\n");
 		
 		handleOptionalExpressionInSquareBrackets();
@@ -685,6 +694,7 @@ public class CompilationEngine {
 
 			_tokenizer.advance();
 			if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '[') {
+				// look up information to add to this identifier tag in the symbol table
 				_bw.write("<identifier> " + varName + " </identifier>\n");
 				_bw.write("<symbol> " + '[' + " </symbol>\n");
 				
@@ -694,6 +704,7 @@ public class CompilationEngine {
 			}
 			else if (_tokenizer.tokenType() == TokenType.SYMBOL && (_tokenizer.symbol() == '(' || _tokenizer.symbol() == '.')) {
 				if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '(') {
+					// look up information to add to this identifier tag in the symbol table
 					_bw.write("<identifier> " + varName + " </identifier>\n");
 					_bw.write("<symbol> " + '(' + " </symbol>\n");
 					
@@ -702,6 +713,7 @@ public class CompilationEngine {
 					eatSymbol(')');
 				}
 				else if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '.') {
+					// look up information to add to this identifier tag in the symbol table
 					_bw.write("<identifier> " + varName + " </identifier>\n");
 					_bw.write("<symbol> " + '.' + " </symbol>\n");
 					
@@ -710,6 +722,7 @@ public class CompilationEngine {
 						System.err.println("Error compiling subroutine call!");
 						return;
 					}
+					// look up information to add to this identifier tag in the symbol table
 					_bw.write("<identifier> " + _tokenizer.identifier() + " </identifier>\n");
 
 					eatSymbol('(');
@@ -723,6 +736,7 @@ public class CompilationEngine {
 				}
 			}
 			else {
+				// look up information to add to this identifier tag in the symbol table
 				_bw.write("<identifier> " + varName + " </identifier>\n");
 				_tokenizer.retreat();
 			}

@@ -6,12 +6,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 /*
- * TODO: Currently, compilation engine attempts to look up all identifiers in
- * symbol table. Need to instead treat class names and subroutine names
- * separately.
- * 
- * I think if an identifier is not in symbol table, that means it's a class
- * or subroutine name. Context can determine which.
+ * TODO: Need to eliminate occurences of kind="none" in the XML output.
+ * All Identifiers need to be handled correctly.
+ * Check XML output for errors and fix.
  */
 public class CompilationEngine {
 	
@@ -726,10 +723,9 @@ public class CompilationEngine {
 
 			_tokenizer.advance();
 			if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '[') {
-				String name = varName;
-				Kind kind = _symbolTable.kindOf(name);
-				String type = _symbolTable.typeOf(name);
-				int number = _symbolTable.indexOf(name);
+				Kind kind = _symbolTable.kindOf(varName);
+				String type = _symbolTable.typeOf(varName);
+				int number = _symbolTable.indexOf(varName);
 				_bw.write("<identifier kind=\"" + kind.toString().toLowerCase() + "\" number=\"" + number + "\" definition=\"false\" type=\"" + type + "\"> " + varName  + " </identifier>\n");
 				_bw.write("<symbol> " + '[' + " </symbol>\n");
 				
@@ -747,10 +743,9 @@ public class CompilationEngine {
 					eatSymbol(')');
 				}
 				else if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '.') {
-					String name = _tokenizer.identifier();
-					Kind kind = _symbolTable.kindOf(name);
-					String type = _symbolTable.typeOf(name);
-					int number = _symbolTable.indexOf(name);
+					Kind kind = _symbolTable.kindOf(varName);
+					String type = _symbolTable.typeOf(varName);
+					int number = _symbolTable.indexOf(varName);
 					if (kind == Kind.NONE) {
 						// Class function (static function) call
 						_bw.write("<identifier kind=\"class\" definition=\"false\"> " + varName  + " </identifier>\n");
@@ -779,10 +774,9 @@ public class CompilationEngine {
 				}
 			}
 			else {
-				String name = _tokenizer.identifier();
-				Kind kind = _symbolTable.kindOf(name);
-				String type = _symbolTable.typeOf(name);
-				int number = _symbolTable.indexOf(name);
+				Kind kind = _symbolTable.kindOf(varName);
+				String type = _symbolTable.typeOf(varName);
+				int number = _symbolTable.indexOf(varName);
 				_bw.write("<identifier kind=\"" + kind.toString().toLowerCase() + "\" number=\"" + number + "\" definition=\"false\" type=\"" + type + "\"> " + varName  + " </identifier>\n");
 				_tokenizer.retreat();
 			}

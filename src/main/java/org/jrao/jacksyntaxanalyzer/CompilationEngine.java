@@ -5,21 +5,25 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
+/*
+ * TODO: Currently, compilation engine attempts to look up all identifiers in
+ * symbol table. Need to instead treat class names and subroutine names
+ * separately.
+ * 
+ * I think if an identifier is not in symbol table, that means it's a class
+ * or subroutine name. Context can determine which.
+ */
 public class CompilationEngine {
-	
-	public int nextStaticNumber;
-	public int nextFieldNumber;
-	public int nextArgNumber;
-	public int nextVarNumber;
 	
 	public CompilationEngine(File inputFile, File outputFile) throws IOException {
 		_bw = new BufferedWriter(new FileWriter(outputFile));
 		_tokenizer = new JackTokenizer(inputFile);
+		_symbolTable = new SymbolTable();
 		
-		nextStaticNumber = 0;
-		nextFieldNumber = 0;
-		nextArgNumber = 0;
-		nextVarNumber = 0;
+		_nextStaticNumber = 0;
+		_nextFieldNumber = 0;
+		_nextArgNumber = 0;
+		_nextVarNumber = 0;
 	}
 	
 	public void close() throws IOException {
@@ -39,7 +43,7 @@ public class CompilationEngine {
 			System.err.println("Error compiling class!");
 			return;
 		}
-		_bw.write("<identifier category=\"class\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
+		_bw.write("<identifier kind=\"class\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
 		
 		eatSymbol('{');
 		
@@ -97,6 +101,7 @@ public class CompilationEngine {
 			System.err.println("Error compiling class variables declaration!");
 			return;
 		}
+		String type = "";
 		if (_tokenizer.tokenType().equals(TokenType.KEYWORD)) {
 			if (!(_tokenizer.keyWord() == KeyWord.INT || _tokenizer.keyWord() == KeyWord.CHAR
 					|| _tokenizer.keyWord() == KeyWord.BOOLEAN)) {
@@ -106,16 +111,20 @@ public class CompilationEngine {
 			}
 			if (_tokenizer.keyWord().equals(KeyWord.INT)) {
 				_bw.write("<keyword> int </keyword>\n");
+				type = "int";
 			}
 			else if (_tokenizer.keyWord().equals(KeyWord.CHAR)) {
 				_bw.write("<keyword> char </keyword>\n");
+				type = "char";
 			}
 			else {
 				_bw.write("<keyword> boolean </keyword>\n");
+				type = "boolean";
 			}
 		}
 		else {
-			_bw.write("<identifier category=\"class\" definition=\"false\"> " + _tokenizer.identifier()  + " </identifier>\n");
+			_bw.write("<identifier kind=\"class\" definition=\"false\"> " + _tokenizer.identifier()  + " </identifier>\n");
+			type = _tokenizer.identifier();
 		}
 
 		// Handle varName
@@ -125,19 +134,21 @@ public class CompilationEngine {
 			return;
 		}
 		if (kind == Kind.STATIC) {
-			_bw.write("<identifier category=\"static\" number=\"" + nextStaticNumber + "\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
-			nextStaticNumber++;
+			_bw.write("<identifier kind=\"static\" number=\"" + _nextStaticNumber + "\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+			_symbolTable.define(_tokenizer.identifier(), type, Kind.STATIC);
+			_nextStaticNumber++;
 		}
 		else if (kind == Kind.FIELD) {
-			_bw.write("<identifier category=\"field\" number=\"" + nextFieldNumber + "\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
-			nextFieldNumber++;
+			_bw.write("<identifier kind=\"field\" number=\"" + _nextFieldNumber + "\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+			_symbolTable.define(_tokenizer.identifier(), type, Kind.FIELD);
+			_nextFieldNumber++;
 		}
 		else {
 			throw new IllegalStateException();
 		}
 		
 		// Handle ',' or ';'
-		handleVariableDeclarationList(kind);
+		handleVariableDeclarationList(kind, type);
 
 		_bw.write("</classVarDec>\n");
 		
@@ -151,8 +162,8 @@ public class CompilationEngine {
 		if (_tokenizer.tokenType().equals(TokenType.SYMBOL) && _tokenizer.symbol() == '}') {
 			_tokenizer.retreat();
 			
-			nextArgNumber = 0;
-			nextVarNumber = 0;
+			_nextArgNumber = 0;
+			_nextVarNumber = 0;
 			
 			return;
 		}
@@ -195,7 +206,7 @@ public class CompilationEngine {
 			}
 		}
 		else {
-			_bw.write("<identifier category=\"class\" definition=\"false\"" + "> " + _tokenizer.identifier()  + " </identifier>\n");
+			_bw.write("<identifier kind=\"class\" definition=\"false\"" + "> " + _tokenizer.identifier()  + " </identifier>\n");
 		}
 		
 		// Handle subroutine name
@@ -204,7 +215,7 @@ public class CompilationEngine {
 			System.err.println("Error compiling subroutines!");
 			return;
 		}
-		_bw.write("<identifier category=\"subroutine\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+		_bw.write("<identifier kind=\"subroutine\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
 		
 		// Handle parameter list
 		eatSymbol('(');
@@ -265,6 +276,7 @@ public class CompilationEngine {
 			System.err.println("Error compiling parameter list!");
 			return;
 		}
+		String type = "";
 		if (_tokenizer.tokenType().equals(TokenType.KEYWORD)) {
 			if (!(_tokenizer.keyWord() == KeyWord.INT || _tokenizer.keyWord() == KeyWord.CHAR
 					|| _tokenizer.keyWord() == KeyWord.BOOLEAN)) {
@@ -274,16 +286,20 @@ public class CompilationEngine {
 			}
 			if (_tokenizer.keyWord().equals(KeyWord.INT)) {
 				_bw.write("<keyword> int </keyword>\n");
+				type = "int";
 			}
 			else if (_tokenizer.keyWord().equals(KeyWord.CHAR)) {
 				_bw.write("<keyword> char </keyword>\n");
+				type = "char";
 			}
 			else {
 				_bw.write("<keyword> boolean </keyword>\n");
+				type = "boolean";
 			}
 		}
 		else {
-			_bw.write("<identifier category=\"class\" definition=\"false\"" + "> " + _tokenizer.identifier()  + " </identifier>\n");
+			_bw.write("<identifier kind=\"class\" definition=\"false\"" + "> " + _tokenizer.identifier()  + " </identifier>\n");
+			type = _tokenizer.identifier();
 		}
 
 		// handle varName
@@ -292,8 +308,9 @@ public class CompilationEngine {
 			System.err.println("Error compiling parameter list!");
 			return;
 		}
-		_bw.write("<identifier category=\"argument\" number=\"" + nextArgNumber + " definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
-		nextArgNumber++;
+		_bw.write("<identifier kind=\"argument\" number=\"" + _nextArgNumber + "\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+		_symbolTable.define(_tokenizer.identifier(), type, Kind.ARG);
+		_nextArgNumber++;
 		
 		handleMultipleParameters();
 
@@ -318,6 +335,7 @@ public class CompilationEngine {
 					System.err.println("Error compiling multiple parameters in parameter list!");
 					return;
 				}
+				String type = "";
 				if (_tokenizer.tokenType().equals(TokenType.KEYWORD)) {
 					if (!(_tokenizer.keyWord() == KeyWord.INT || _tokenizer.keyWord() == KeyWord.CHAR
 							|| _tokenizer.keyWord() == KeyWord.BOOLEAN)) {
@@ -327,16 +345,20 @@ public class CompilationEngine {
 					}
 					if (_tokenizer.keyWord().equals(KeyWord.INT)) {
 						_bw.write("<keyword> int </keyword>\n");
+						type = "int";
 					}
 					else if (_tokenizer.keyWord().equals(KeyWord.CHAR)) {
 						_bw.write("<keyword> char </keyword>\n");
+						type = "char";
 					}
 					else {
 						_bw.write("<keyword> boolean </keyword>\n");
+						type = "boolean";
 					}
 				}
 				else {
-					_bw.write("<identifier category=\"class\" definition=\"false\"" + "> " + _tokenizer.identifier()  + " </identifier>\n");
+					_bw.write("<identifier kind=\"class\" definition=\"false\"" + "> " + _tokenizer.identifier()  + " </identifier>\n");
+					type = _tokenizer.identifier();
 				}
 
 				// handle varName
@@ -345,8 +367,9 @@ public class CompilationEngine {
 					System.err.println("Error compiling multiple parameters in parameter list!");
 					return;
 				}
-				_bw.write("<identifier category=\"argument\" number=\"" + nextArgNumber + " definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
-				nextArgNumber++;
+				_bw.write("<identifier kind=\"argument\" number=\"" + _nextArgNumber + " definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+				_symbolTable.define(_tokenizer.identifier(), type, Kind.ARG);
+				_nextArgNumber++;
 			}
 			else {
 				endParenthesisFound = true;
@@ -372,6 +395,7 @@ public class CompilationEngine {
 			System.err.println("Error in compileVarDec!");
 			return;
 		}
+		String type = "";
 		if (_tokenizer.tokenType().equals(TokenType.KEYWORD)) {
 			if (!(_tokenizer.keyWord() == KeyWord.INT || _tokenizer.keyWord() == KeyWord.CHAR
 					|| _tokenizer.keyWord() == KeyWord.BOOLEAN)) {
@@ -381,16 +405,20 @@ public class CompilationEngine {
 			}
 			if (_tokenizer.keyWord().equals(KeyWord.INT)) {
 				_bw.write("<keyword> int </keyword>\n");
+				type = "int";
 			}
 			else if (_tokenizer.keyWord().equals(KeyWord.CHAR)) {
 				_bw.write("<keyword> char </keyword>\n");
+				type = "char";
 			}
 			else {
 				_bw.write("<keyword> boolean </keyword>\n");
+				type = "boolean";
 			}
 		}
 		else {
-			_bw.write("<identifier category=\"class\" definition=\"false\"" + "> " + _tokenizer.identifier()  + " </identifier>\n");
+			_bw.write("<identifier kind=\"class\" definition=\"false\"" + "> " + _tokenizer.identifier()  + " </identifier>\n");
+			type = _tokenizer.identifier();
 		}
 
 		// Handle varName
@@ -399,11 +427,12 @@ public class CompilationEngine {
 			System.err.println("Error compiling class variables declaration!");
 			return;
 		}
-		_bw.write("<identifier category=\"var\" number=\"" + nextVarNumber + " definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
-		nextVarNumber++;
+		_bw.write("<identifier kind=\"var\" number=\"" + _nextVarNumber + "\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+		_symbolTable.define(_tokenizer.identifier(), type, Kind.VAR);
+		_nextVarNumber++;
 		
 		// Handle ',' or ';'
-		handleVariableDeclarationList(kind);
+		handleVariableDeclarationList(kind, type);
 
 		_bw.write("</varDec>\n");
 	}
@@ -485,7 +514,7 @@ public class CompilationEngine {
 			System.err.println("Error compiling subroutine call!");
 		}
 		if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '(') {
-			_bw.write("<identifier category=\"subroutine\" definition=\"false\"> " + varName + " </identifier>\n");
+			_bw.write("<identifier kind=\"subroutine\" definition=\"false\"> " + varName + " </identifier>\n");
 			_bw.write("<symbol> " + '(' + " </symbol>\n");
 			
 			compileExpressionList();
@@ -493,7 +522,7 @@ public class CompilationEngine {
 			eatSymbol(')');
 		}
 		else {
-			_bw.write("<identifier category=\"class\" definition=\"false\"> " + varName + " </identifier>\n");
+			_bw.write("<identifier kind=\"class\" definition=\"false\"> " + varName + " </identifier>\n");
 			_bw.write("<symbol> " + '.' + " </symbol>\n");
 			
 			_tokenizer.advance();
@@ -501,7 +530,7 @@ public class CompilationEngine {
 				System.err.println("Error compiling subroutine call!");
 				return;
 			}
-			_bw.write("<identifier category=\"subroutine\" definition=\"false\"> " + _tokenizer.identifier() + " </identifier>\n");
+			_bw.write("<identifier kind=\"subroutine\" definition=\"false\"> " + _tokenizer.identifier() + " </identifier>\n");
 
 			eatSymbol('(');
 			
@@ -522,8 +551,11 @@ public class CompilationEngine {
 			System.err.println("Error compiling Let!");
 			return;
 		}
-		// look up information to add to this identifier tag in the symbol table
-		_bw.write("<identifier> " + _tokenizer.identifier()  + " </identifier>\n");
+		String name = _tokenizer.identifier();
+		Kind kind = _symbolTable.kindOf(name);
+		String type = _symbolTable.typeOf(name);
+		int number = _symbolTable.indexOf(name);
+		_bw.write("<identifier kind=\"" + kind.toString().toLowerCase() + "\" number=\"" + number + "\" definition=\"false\" type=\"" + type + "\"> " + _tokenizer.identifier()  + " </identifier>\n");
 		
 		handleOptionalExpressionInSquareBrackets();
 
@@ -694,8 +726,11 @@ public class CompilationEngine {
 
 			_tokenizer.advance();
 			if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '[') {
-				// look up information to add to this identifier tag in the symbol table
-				_bw.write("<identifier> " + varName + " </identifier>\n");
+				String name = varName;
+				Kind kind = _symbolTable.kindOf(name);
+				String type = _symbolTable.typeOf(name);
+				int number = _symbolTable.indexOf(name);
+				_bw.write("<identifier kind=\"" + kind.toString().toLowerCase() + "\" number=\"" + number + "\" definition=\"false\" type=\"" + type + "\"> " + varName  + " </identifier>\n");
 				_bw.write("<symbol> " + '[' + " </symbol>\n");
 				
 				compileExpression();
@@ -704,8 +739,7 @@ public class CompilationEngine {
 			}
 			else if (_tokenizer.tokenType() == TokenType.SYMBOL && (_tokenizer.symbol() == '(' || _tokenizer.symbol() == '.')) {
 				if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '(') {
-					// look up information to add to this identifier tag in the symbol table
-					_bw.write("<identifier> " + varName + " </identifier>\n");
+					_bw.write("<identifier kind=\"subroutine\" definition=\"false\"> " + varName  + " </identifier>\n");
 					_bw.write("<symbol> " + '(' + " </symbol>\n");
 					
 					compileExpressionList();
@@ -713,8 +747,18 @@ public class CompilationEngine {
 					eatSymbol(')');
 				}
 				else if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '.') {
-					// look up information to add to this identifier tag in the symbol table
-					_bw.write("<identifier> " + varName + " </identifier>\n");
+					String name = _tokenizer.identifier();
+					Kind kind = _symbolTable.kindOf(name);
+					String type = _symbolTable.typeOf(name);
+					int number = _symbolTable.indexOf(name);
+					if (kind == Kind.NONE) {
+						// Class function (static function) call
+						_bw.write("<identifier kind=\"class\" definition=\"false\"> " + varName  + " </identifier>\n");
+					}
+					else {
+						// Object function (method) call
+						_bw.write("<identifier kind=\"" + kind.toString().toLowerCase() + "\" number=\"" + number + "\" definition=\"false\" type=\"" + type + "\"> " + varName  + " </identifier>\n");
+					}
 					_bw.write("<symbol> " + '.' + " </symbol>\n");
 					
 					_tokenizer.advance();
@@ -722,8 +766,7 @@ public class CompilationEngine {
 						System.err.println("Error compiling subroutine call!");
 						return;
 					}
-					// look up information to add to this identifier tag in the symbol table
-					_bw.write("<identifier> " + _tokenizer.identifier() + " </identifier>\n");
+					_bw.write("<identifier kind=\"subroutine\" definition=\"false\"> " + _tokenizer.identifier()  + " </identifier>\n");
 
 					eatSymbol('(');
 					
@@ -736,8 +779,11 @@ public class CompilationEngine {
 				}
 			}
 			else {
-				// look up information to add to this identifier tag in the symbol table
-				_bw.write("<identifier> " + varName + " </identifier>\n");
+				String name = _tokenizer.identifier();
+				Kind kind = _symbolTable.kindOf(name);
+				String type = _symbolTable.typeOf(name);
+				int number = _symbolTable.indexOf(name);
+				_bw.write("<identifier kind=\"" + kind.toString().toLowerCase() + "\" number=\"" + number + "\" definition=\"false\" type=\"" + type + "\"> " + varName  + " </identifier>\n");
 				_tokenizer.retreat();
 			}
 		}
@@ -797,7 +843,7 @@ public class CompilationEngine {
 	}
 	
 	// to invoke this method, next token must a comma or a semicolon symbol
-	private void handleVariableDeclarationList(Kind kind) throws IOException {
+	private void handleVariableDeclarationList(Kind kind, String type) throws IOException {
 		boolean semiColonFound = false;
 		while (!semiColonFound) {
 			_tokenizer.advance();
@@ -814,20 +860,24 @@ public class CompilationEngine {
 					return;
 				}
 				if (kind == Kind.STATIC) {
-					_bw.write("<identifier category=\"static\" number=\"" + nextStaticNumber + "\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
-					nextStaticNumber++;
+					_bw.write("<identifier kind=\"static\" number=\"" + _nextStaticNumber + "\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
+					_symbolTable.define(_tokenizer.identifier(), type, kind);
+					_nextStaticNumber++;
 				}
 				else if (kind == Kind.FIELD) {
-					_bw.write("<identifier category=\"field\" number=\"" + nextFieldNumber + "\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
-					nextStaticNumber++;
+					_bw.write("<identifier kind=\"field\" number=\"" + _nextFieldNumber + "\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
+					_symbolTable.define(_tokenizer.identifier(), type, kind);
+					_nextStaticNumber++;
 				}
 				else if (kind == Kind.VAR) {
-					_bw.write("<identifier category=\"var\" number=\"" + nextVarNumber + "\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
-					nextVarNumber++;
+					_bw.write("<identifier kind=\"var\" number=\"" + _nextVarNumber + "\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
+					_symbolTable.define(_tokenizer.identifier(), type, kind);
+					_nextVarNumber++;
 				}
 				else if (kind == Kind.ARG) {
-					_bw.write("<identifier category=\"arg\" number=\"" + nextArgNumber + "\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
-					nextArgNumber++;
+					_bw.write("<identifier kind=\"arg\" number=\"" + _nextArgNumber + "\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
+					_symbolTable.define(_tokenizer.identifier(), type, kind);
+					_nextArgNumber++;
 				}
 				else {
 					throw new IllegalArgumentException();
@@ -874,5 +924,10 @@ public class CompilationEngine {
 
 	private BufferedWriter _bw;
 	private JackTokenizer _tokenizer;
+	private SymbolTable _symbolTable;
+	private int _nextStaticNumber;
+	private int _nextFieldNumber;
+	private int _nextArgNumber;
+	private int _nextVarNumber;
 	
 }

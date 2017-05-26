@@ -45,9 +45,6 @@ public class SymbolTable {
 			_subroutineSymbolTable.put(name, row);
 			_nextVarNumber++;
 		}
-		else {
-			throw new IllegalArgumentException("kind must be one of STATIC, FIELD, ARG, or VAR!");
-		}
 	}
 	
 	/*
@@ -67,7 +64,7 @@ public class SymbolTable {
 			return _nextVarNumber;
 		}
 		else {
-			throw new IllegalArgumentException("kind must be one of STATIC, FIELD, ARG, or VAR!");
+			return -1;
 		}
 	}
 	

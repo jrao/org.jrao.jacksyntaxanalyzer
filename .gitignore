@@ -1,5 +1,6 @@
 *.class
 .gradle/
 .settings/
-tmp/
+bin/
 build/
+tmp/

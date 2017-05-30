@@ -5,15 +5,19 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
-/*
- * TODO: Need to eliminate occurences of kind="none" in the XML output.
- * All Identifiers need to be handled correctly.
- * Check XML output for errors and fix.
- */
 public class CompilationEngine {
 	
 	public CompilationEngine(File inputFile, File outputFile) throws IOException {
 		_bw = new BufferedWriter(new FileWriter(outputFile));
+		String outputFilePath = outputFile.getAbsolutePath();
+		String vmOutputFilePath = outputFilePath;
+		if (vmOutputFilePath.endsWith(".jack.xml")) {
+			vmOutputFilePath = vmOutputFilePath.replace(".jack.xml", ".vm");
+		}
+		else {
+			System.err.println("Error: Invalid file name extension of output file: " + outputFile.getName());
+		}
+		_vw = new VMWriter(new File(vmOutputFilePath));
 		_tokenizer = new JackTokenizer(inputFile);
 		_symbolTable = new SymbolTable();
 		
@@ -28,6 +32,7 @@ public class CompilationEngine {
 			_bw.flush();
 			_bw.close();
 		}
+		_vw.close();
 	}
 	
 	public void compileClass() throws IOException {
@@ -131,12 +136,12 @@ public class CompilationEngine {
 			return;
 		}
 		if (kind == Kind.STATIC) {
-			_bw.write("<identifier kind=\"static\" number=\"" + _nextStaticNumber + "\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+			_bw.write("<identifier kind=\"static\" number=\"" + _nextStaticNumber + "\" definition=\"true\" type=\"" + type + "\"> " + _tokenizer.identifier()  + " </identifier>\n");
 			_symbolTable.define(_tokenizer.identifier(), type, Kind.STATIC);
 			_nextStaticNumber++;
 		}
 		else if (kind == Kind.FIELD) {
-			_bw.write("<identifier kind=\"field\" number=\"" + _nextFieldNumber + "\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+			_bw.write("<identifier kind=\"field\" number=\"" + _nextFieldNumber + "\" definition=\"true\" type=\"" + type + "\"> " + _tokenizer.identifier()  + " </identifier>\n");
 			_symbolTable.define(_tokenizer.identifier(), type, Kind.FIELD);
 			_nextFieldNumber++;
 		}
@@ -305,7 +310,7 @@ public class CompilationEngine {
 			System.err.println("Error compiling parameter list!");
 			return;
 		}
-		_bw.write("<identifier kind=\"argument\" number=\"" + _nextArgNumber + "\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+		_bw.write("<identifier kind=\"argument\" number=\"" + _nextArgNumber + "\" definition=\"true\" type=\"" + type + "\"> " + _tokenizer.identifier()  + " </identifier>\n");
 		_symbolTable.define(_tokenizer.identifier(), type, Kind.ARG);
 		_nextArgNumber++;
 		
@@ -364,7 +369,7 @@ public class CompilationEngine {
 					System.err.println("Error compiling multiple parameters in parameter list!");
 					return;
 				}
-				_bw.write("<identifier kind=\"argument\" number=\"" + _nextArgNumber + " definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+				_bw.write("<identifier kind=\"argument\" number=\"" + _nextArgNumber + "\" definition=\"true\" type=\"" + type + "\"> " + _tokenizer.identifier()  + " </identifier>\n");
 				_symbolTable.define(_tokenizer.identifier(), type, Kind.ARG);
 				_nextArgNumber++;
 			}
@@ -424,7 +429,7 @@ public class CompilationEngine {
 			System.err.println("Error compiling class variables declaration!");
 			return;
 		}
-		_bw.write("<identifier kind=\"var\" number=\"" + _nextVarNumber + "\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+		_bw.write("<identifier kind=\"var\" number=\"" + _nextVarNumber + "\" definition=\"true\" type=\"" + type + "\"> " + _tokenizer.identifier()  + " </identifier>\n");
 		_symbolTable.define(_tokenizer.identifier(), type, Kind.VAR);
 		_nextVarNumber++;
 		
@@ -821,7 +826,7 @@ public class CompilationEngine {
 		do {
 			_tokenizer.advance();
 			if (_tokenizer.tokenType().equals(TokenType.SYMBOL) && _tokenizer.symbol() == ',') {
-				_bw.write("<symbol> " + ',' + "</symbol>\n");
+				_bw.write("<symbol> " + ',' + " </symbol>\n");
 				
 				compileExpression();
 			}
@@ -917,6 +922,7 @@ public class CompilationEngine {
 	}
 
 	private BufferedWriter _bw;
+	private VMWriter _vw;
 	private JackTokenizer _tokenizer;
 	private SymbolTable _symbolTable;
 	private int _nextStaticNumber;

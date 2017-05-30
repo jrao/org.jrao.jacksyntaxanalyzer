@@ -19,15 +19,15 @@ public class VMWriter {
 	 */
 	public void writePush(String segment, int index) throws IOException {
 		switch (segment) {
-			case "CONST":
-			case "ARG":
-			case "LOCAL":
-			case "STATIC":
-			case "THIS":
-			case "THAT":
-			case "POINTER":
-			case "TEMP":
-				_bw.write("push " + segment + " " + index);
+			case "constant":
+			case "arg":
+			case "local":
+			case "static":
+			case "this":
+			case "that":
+			case "pointer":
+			case "temp":
+				_bw.write("push " + segment + " " + index + "\n");
 				break;
 			default:
 				System.err.println("Error: Invalid argument 'segment': " + segment + "\n");
@@ -40,15 +40,15 @@ public class VMWriter {
 	 */
 	public void writePop(String segment, int index) throws IOException {
 		switch (segment) {
-			case "CONST":
-			case "ARG":
-			case "LOCAL":
-			case "STATIC":
-			case "THIS":
-			case "THAT":
-			case "POINTER":
-			case "TEMP":
-				_bw.write("pop " + segment + " " + index);
+			case "const":
+			case "arg":
+			case "local":
+			case "static":
+			case "this":
+			case "that":
+			case "pointer":
+			case "temp":
+				_bw.write("pop " + segment + " " + index + "\n");
 				break;
 			default:
 				System.err.println("Error: Invalid argument 'segment': " + segment + "\n");
@@ -61,15 +61,15 @@ public class VMWriter {
 	 */
 	public void writeArithmetic(String command) throws IOException {
 		switch (command) {
-			case "ADD":
-			case "SUB":
-			case "NEG":
-			case "EQ":
-			case "GT":
-			case "LT":
-			case "AND":
-			case "OR":
-			case "NOT":
+			case "add":
+			case "sub":
+			case "neg":
+			case "eq":
+			case "gt":
+			case "lt":
+			case "and":
+			case "or":
+			case "not":
 				_bw.write(command + "\n");
 				break;
 			default:
@@ -117,7 +117,7 @@ public class VMWriter {
 	 * Writes a VM return command
 	 */
 	public void writeReturn() throws IOException {
-		_bw.write("return \n");
+		_bw.write("return\n");
 	}
 	
 	/*

@@ -41,6 +41,10 @@ public class JackAnalyzer {
         	}
         }
         
+        if (jackFiles.size() < 1) {
+        	System.err.println("Error: no Jack files found!");
+        	return;
+        }
         for (File jackFile : jackFiles) {
 			String jackFilePathString = jackFile.getAbsolutePath();
 			String outputFilePathString = jackFilePathString.concat(".xml");

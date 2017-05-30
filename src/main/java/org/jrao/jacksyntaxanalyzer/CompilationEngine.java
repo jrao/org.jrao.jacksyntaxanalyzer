@@ -12,7 +12,7 @@ public class CompilationEngine {
 		String outputFilePath = outputFile.getAbsolutePath();
 		String vmOutputFilePath = outputFilePath;
 		if (vmOutputFilePath.endsWith(".jack.xml")) {
-			vmOutputFilePath = vmOutputFilePath.replace(".jack.xml", ".vm");
+			vmOutputFilePath = vmOutputFilePath.replace(".jack.xml", ".jack.vm");
 		}
 		else {
 			System.err.println("Error: Invalid file name extension of output file: " + outputFile.getName());
@@ -46,6 +46,7 @@ public class CompilationEngine {
 			return;
 		}
 		_bw.write("<identifier kind=\"class\" definition=\"true\"> " + _tokenizer.identifier() + " </identifier>\n");
+		_currentClass = _tokenizer.identifier();
 		
 		eatSymbol('{');
 		
@@ -218,6 +219,7 @@ public class CompilationEngine {
 			return;
 		}
 		_bw.write("<identifier kind=\"subroutine\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+		_currentSubroutine = _tokenizer.identifier();
 		
 		// Handle parameter list
 		eatSymbol('(');
@@ -229,6 +231,7 @@ public class CompilationEngine {
 		compileSubroutineBody();
 		
 		_bw.write("</subroutineDec>\n");
+		_currentSubroutine = "";
 		
 		compileSubroutine();
 	}
@@ -239,6 +242,9 @@ public class CompilationEngine {
 		eatSymbol('{');
 
 		handleMultipleVariableDeclarations();
+
+		_vw.writeFunction(_currentClass + "." +_currentSubroutine, _symbolTable.varCount(Kind.VAR));
+		
 		compileStatements();
 
 		eatSymbol('}');
@@ -247,7 +253,6 @@ public class CompilationEngine {
 	}
 
 	private void handleMultipleVariableDeclarations() throws IOException {
-		boolean hasMoreVarDecs = false;
 		do {
 			_tokenizer.advance();
 			if (!_tokenizer.tokenType().equals(TokenType.KEYWORD) || !_tokenizer.keyWord().equals(KeyWord.VAR)) {
@@ -255,11 +260,10 @@ public class CompilationEngine {
 				return;
 			}
 			_tokenizer.retreat();
-			hasMoreVarDecs = true;
 		
 			compileVarDec();
 		}
-		while (hasMoreVarDecs);
+		while (true);
 	}
 
 	public void compileParameterList() throws IOException {
@@ -609,9 +613,13 @@ public class CompilationEngine {
 		_bw.write("<returnStatement>\n");
 
 		eatKeyword(KeyWord.RETURN);
+		
+		boolean returnExpression = false;
 
 		_tokenizer.advance();
 		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != ';') {
+			returnExpression = true;
+			
 			_tokenizer.retreat();
 			
 			compileExpression();
@@ -621,6 +629,13 @@ public class CompilationEngine {
 		_bw.write("<symbol> ; </symbol>\n");
 
 		_bw.write("</returnStatement>\n");
+		
+		// Even void subroutines must return something
+		if (!returnExpression) {
+			_vw.writePush("constant", 0);
+		}
+		
+		_vw.writeReturn();
 	}
 	
 	public void compileIf() throws IOException {
@@ -662,6 +677,26 @@ public class CompilationEngine {
 		
 		compileTerm();
 		
+		while (true) {
+			_tokenizer.advance();
+			if (!(_tokenizer.tokenType() == TokenType.SYMBOL
+					&& (_tokenizer.symbol() == '+' || _tokenizer.symbol() == '-' || _tokenizer.symbol() == '*'
+					|| _tokenizer.symbol() == '/' || _tokenizer.symbol() == '&' || _tokenizer.symbol() == '|'
+					|| _tokenizer.symbol() == '<' || _tokenizer.symbol() == '>' || _tokenizer.symbol() == '='))) {
+
+				_tokenizer.retreat();
+				break;
+			}
+			char operator = _tokenizer.symbol();
+			String symbolString = getEscapedSymbol(operator);
+			_bw.write("<symbol> " + symbolString + " </symbol>\n");
+
+			_tokenizer.advance();
+			compileTerm();
+			compileOperator(operator);
+		}
+
+		/*
 		_tokenizer.advance();
 		if (_tokenizer.tokenType() == TokenType.SYMBOL
 				&& (_tokenizer.symbol() == '+' || _tokenizer.symbol() == '-' || _tokenizer.symbol() == '*'
@@ -674,10 +709,12 @@ public class CompilationEngine {
 		else {
 			_tokenizer.retreat();
 		}
+		*/
 
 		_bw.write("</expression>\n");
 	}
 	
+	/*
 	private void compileOpTerm() throws IOException {
 		do {
 			_tokenizer.advance();
@@ -705,6 +742,41 @@ public class CompilationEngine {
 			}
 		}
 		while (true);
+	}
+	*/
+
+	private void compileOperator(char operator) throws IOException {
+		switch (operator) {
+		case '+':
+			_vw.writeArithmetic("add");
+			break;
+		case '-':
+			_vw.writeArithmetic("sub");
+			break;
+		case '*':
+			_vw.writeCall("Math.multiply", 2);
+			break;
+		case '/':
+			_vw.writeCall("Math.divide", 2);
+			break;
+		case '&':
+			_vw.writeArithmetic("and");
+			break;
+		case '|':
+			_vw.writeArithmetic("or");
+			break;
+		case '<':
+			_vw.writeArithmetic("lt");
+			break;
+		case '>':
+			_vw.writeArithmetic("gt");
+			break;
+		case '=':
+			_vw.writeArithmetic("eq");
+			break;
+		default:
+			System.err.println("Error: Invalid operator: " + operator);
+		}
 	}
 
 	public void compileTerm() throws IOException {
@@ -925,6 +997,10 @@ public class CompilationEngine {
 	private VMWriter _vw;
 	private JackTokenizer _tokenizer;
 	private SymbolTable _symbolTable;
+	
+	private String _currentClass;
+	private String _currentSubroutine;
+	
 	private int _nextStaticNumber;
 	private int _nextFieldNumber;
 	private int _nextArgNumber;

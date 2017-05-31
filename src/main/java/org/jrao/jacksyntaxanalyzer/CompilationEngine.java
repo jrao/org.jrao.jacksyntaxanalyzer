@@ -575,12 +575,21 @@ public class CompilationEngine {
 		int number = _symbolTable.indexOf(name);
 		_bw.write("<identifier kind=\"" + kind.toString().toLowerCase() + "\" number=\"" + number + "\" definition=\"false\" type=\"" + type + "\"> " + _tokenizer.identifier()  + " </identifier>\n");
 		
-		handleOptionalExpressionInSquareBrackets();
-
+		boolean squareBrackets = handleOptionalExpressionInSquareBrackets();
+		
 		// handle =
 		eatSymbol('=');
 		
 		compileExpression();
+
+		if (!squareBrackets) {
+			String segment = segmentFromKind(kind);
+			if (segment.equals("")) {
+				System.err.println("Error: Can only assign values to argument, field, static, or local variables!");
+				return;
+			}
+			_vw.writePop(segment, number);
+		}
 
 		// handle ;
 		eatSymbol(';');
@@ -588,17 +597,22 @@ public class CompilationEngine {
 		_bw.write("</letStatement>\n");
 	}
 	
-	private void handleOptionalExpressionInSquareBrackets() throws IOException {
+	/*
+	 * Returns true if there are square brackets, false otherwise
+	 */
+	private boolean handleOptionalExpressionInSquareBrackets() throws IOException {
 		_tokenizer.advance();
 		if (!_tokenizer.tokenType().equals(TokenType.SYMBOL) || _tokenizer.symbol() != '[') {
 			_tokenizer.retreat();
-			return;
+			return false;
 		}
 		_bw.write("<symbol> " + '[' + " </symbol>\n");
 		
 		compileExpression();
 
 		eatSymbol(']');
+		
+		return true;
 	}
 
 	public void compileWhile() throws IOException {
@@ -784,7 +798,9 @@ public class CompilationEngine {
 					_bw.write("<identifier kind=\"subroutine\" definition=\"false\"> " + varName  + " </identifier>\n");
 					_bw.write("<symbol> " + '(' + " </symbol>\n");
 					
-					compileExpressionList();
+					int nArgs = compileExpressionList();
+					
+					_vw.writeCall(_currentClass + "." + varName, nArgs);
 
 					eatSymbol(')');
 				}
@@ -792,13 +808,17 @@ public class CompilationEngine {
 					Kind kind = _symbolTable.kindOf(varName);
 					String type = _symbolTable.typeOf(varName);
 					int number = _symbolTable.indexOf(varName);
+
+					String className = "";
 					if (kind == Kind.NONE) {
 						// Class function (static function) call
 						_bw.write("<identifier kind=\"class\" definition=\"false\"> " + varName  + " </identifier>\n");
+						className = varName;
 					}
 					else {
 						// Object function (method) call
 						_bw.write("<identifier kind=\"" + kind.toString().toLowerCase() + "\" number=\"" + number + "\" definition=\"false\" type=\"" + type + "\"> " + varName  + " </identifier>\n");
+						className = _symbolTable.typeOf(varName);
 					}
 					_bw.write("<symbol> " + '.' + " </symbol>\n");
 					
@@ -808,10 +828,12 @@ public class CompilationEngine {
 						return;
 					}
 					_bw.write("<identifier kind=\"subroutine\" definition=\"false\"> " + _tokenizer.identifier()  + " </identifier>\n");
+					String subroutineName = _tokenizer.identifier();
 
 					eatSymbol('(');
 					
-					compileExpressionList();
+					int nArgs = compileExpressionList();
+					_vw.writeCall(className + "." + subroutineName, nArgs);
 
 					eatSymbol(')');
 				}
@@ -824,6 +846,13 @@ public class CompilationEngine {
 				String type = _symbolTable.typeOf(varName);
 				int number = _symbolTable.indexOf(varName);
 				_bw.write("<identifier kind=\"" + kind.toString().toLowerCase() + "\" number=\"" + number + "\" definition=\"false\" type=\"" + type + "\"> " + varName  + " </identifier>\n");
+
+				String segment = segmentFromKind(kind);
+				if (segment.equals(null)) {
+					System.err.println("Error: Can only push argument, field, static, or local variables!");
+				}
+				_vw.writePush(segment, number);
+				
 				_tokenizer.retreat();
 			}
 		}
@@ -977,6 +1006,22 @@ public class CompilationEngine {
 			return;
 		}
 		_bw.write("<symbol> " + symbol + " </symbol>\n");
+	}
+	
+	private String segmentFromKind(Kind kind) {
+		switch (kind) {
+		case ARG:
+			return "arg";
+		case FIELD:
+			return "this";
+		case STATIC:
+			return "static";
+		case VAR:
+			return "local";
+		case NONE:
+		default:
+			return "";
+		}
 	}
 
 	private BufferedWriter _bw;

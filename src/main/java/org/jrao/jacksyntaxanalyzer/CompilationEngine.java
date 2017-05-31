@@ -838,8 +838,16 @@ public class CompilationEngine {
 				&& (_tokenizer.symbol() == '-' || _tokenizer.symbol() == '~')) {
 
 			_bw.write("<symbol> " + _tokenizer.symbol() + " </symbol>\n");
-			
+			char symbol = _tokenizer.symbol();
+
 			compileTerm();
+
+			if (symbol == '-') {
+				_vw.writeArithmetic("neg");
+			}
+			else if (symbol == '~') {
+				_vw.writeArithmetic("not");
+			}
 		}
 		else {
 			System.err.println("Error compiling term!");

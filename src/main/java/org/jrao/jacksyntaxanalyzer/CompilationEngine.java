@@ -504,6 +504,12 @@ public class CompilationEngine {
 		compileSubroutineCall();
 		
 		eatSymbol(';');
+		
+		/*
+		 * For a Do statement, unlike a Let, the return value must be popped
+		 * here (and thrown away) since it's not explicitly popped to a variable
+		 */
+		_vw.writePop("temp", 0);
 
 		_bw.write("</doStatement>\n");
 	}
@@ -522,14 +528,17 @@ public class CompilationEngine {
 		if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '(') {
 			_bw.write("<identifier kind=\"subroutine\" definition=\"false\"> " + varName + " </identifier>\n");
 			_bw.write("<symbol> " + '(' + " </symbol>\n");
-			
-			compileExpressionList();
 
+			int nArgs = compileExpressionList();
+
+			_vw.writeCall(varName, nArgs);
+			
 			eatSymbol(')');
 		}
 		else {
 			_bw.write("<identifier kind=\"class\" definition=\"false\"> " + varName + " </identifier>\n");
 			_bw.write("<symbol> " + '.' + " </symbol>\n");
+			String objectName = varName;
 			
 			_tokenizer.advance();
 			if (!_tokenizer.tokenType().equals(TokenType.IDENTIFIER)) {
@@ -537,12 +546,15 @@ public class CompilationEngine {
 				return;
 			}
 			_bw.write("<identifier kind=\"subroutine\" definition=\"false\"> " + _tokenizer.identifier() + " </identifier>\n");
+			String subroutineName = _tokenizer.identifier();
 
 			eatSymbol('(');
 			
-			compileExpressionList();
+			int nArgs = compileExpressionList();
 
 			eatSymbol(')');
+
+			_vw.writeCall(objectName + "." + subroutineName, nArgs);
 		}
 	}
 
@@ -692,18 +704,56 @@ public class CompilationEngine {
 				_bw.write("<symbol> " + symbolString + " </symbol>\n");
 				
 				compileTerm();
+				
+				compileOperator(symbolString.charAt(0));
 			}
 		}
 		
 		_bw.write("</expression>\n");
 	}
 	
+	private void compileOperator(char operator) throws IOException {
+		switch (operator) {
+		case '+':
+			_vw.writeArithmetic("add");
+			break;
+		case '-':
+			_vw.writeArithmetic("sub");
+			break;
+		case '*':
+			_vw.writeCall("Math.multiply", 2);
+			break;
+		case '/':
+			_vw.writeCall("Math.divide", 2);
+			break;
+		case '&':
+			_vw.writeArithmetic("and");
+			break;
+		case '|':
+			_vw.writeArithmetic("or");
+			break;
+		case '<':
+			_vw.writeArithmetic("lt");
+			break;
+		case '>':
+			_vw.writeArithmetic("gt");
+			break;
+		case '=':
+			_vw.writeArithmetic("eq");
+			break;
+		default:
+			System.err.println("Error: Invalid operator " + operator);
+			return;
+		}
+	}
+
 	public void compileTerm() throws IOException {
 		_bw.write("<term>\n");
 		
 		_tokenizer.advance();
 		if (_tokenizer.tokenType() == TokenType.INT_CONST) {
 			_bw.write("<integerConstant> " + _tokenizer.intVal() + " </integerConstant>\n");
+			_vw.writePush("constant", _tokenizer.intVal());
 		}
 		else if (_tokenizer.tokenType() == TokenType.STRING_CONST) {
 			_bw.write("<stringConstant> " + _tokenizer.stringVal() + " </stringConstant>\n");
@@ -798,8 +848,15 @@ public class CompilationEngine {
 		_bw.write("</term>\n");
 	}
 	
-	public void compileExpressionList() throws IOException {
+	/*
+	 * Returns an int that represents the number of expressions in the list.
+	 * Useful for determining number of arguments in parameter lists, for
+	 * example.
+	 */
+	public int compileExpressionList() throws IOException {
 		_bw.write("<expressionList>\n");
+		
+		int expressions = 0;
 
 		_tokenizer.advance();
 		if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == ')') {
@@ -807,12 +864,13 @@ public class CompilationEngine {
 
 			_bw.write("</expressionList>\n");
 
-			return;
+			return 0;
 		}
 		
 		_tokenizer.retreat();
 		
 		compileExpression();
+		expressions++;
 
 		do {
 			_tokenizer.advance();
@@ -820,13 +878,14 @@ public class CompilationEngine {
 				_bw.write("<symbol> " + ',' + " </symbol>\n");
 				
 				compileExpression();
+				expressions++;
 			}
 			else {
 				_tokenizer.retreat();
 
 				_bw.write("</expressionList>\n");
 
-				return;
+				return expressions;
 			}
 		}
 		while (true);

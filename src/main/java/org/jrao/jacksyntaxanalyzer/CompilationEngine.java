@@ -683,102 +683,21 @@ public class CompilationEngine {
 					&& (_tokenizer.symbol() == '+' || _tokenizer.symbol() == '-' || _tokenizer.symbol() == '*'
 					|| _tokenizer.symbol() == '/' || _tokenizer.symbol() == '&' || _tokenizer.symbol() == '|'
 					|| _tokenizer.symbol() == '<' || _tokenizer.symbol() == '>' || _tokenizer.symbol() == '='))) {
-
+				
 				_tokenizer.retreat();
 				break;
 			}
-			char operator = _tokenizer.symbol();
-			String symbolString = getEscapedSymbol(operator);
-			_bw.write("<symbol> " + symbolString + " </symbol>\n");
-
-			_tokenizer.advance();
-			compileTerm();
-			compileOperator(operator);
+			else {
+				String symbolString = getEscapedSymbol(_tokenizer.symbol());
+				_bw.write("<symbol> " + symbolString + " </symbol>\n");
+				
+				compileTerm();
+			}
 		}
-
-		/*
-		_tokenizer.advance();
-		if (_tokenizer.tokenType() == TokenType.SYMBOL
-				&& (_tokenizer.symbol() == '+' || _tokenizer.symbol() == '-' || _tokenizer.symbol() == '*'
-				|| _tokenizer.symbol() == '/' || _tokenizer.symbol() == '&' || _tokenizer.symbol() == '|'
-				|| _tokenizer.symbol() == '<' || _tokenizer.symbol() == '>' || _tokenizer.symbol() == '=')) {
-
-			_tokenizer.retreat();
-			compileOpTerm();
-		}
-		else {
-			_tokenizer.retreat();
-		}
-		*/
-
+		
 		_bw.write("</expression>\n");
 	}
 	
-	/*
-	private void compileOpTerm() throws IOException {
-		do {
-			_tokenizer.advance();
-			if (!(_tokenizer.tokenType() == TokenType.SYMBOL
-					&& (_tokenizer.symbol() == '+' || _tokenizer.symbol() == '-' || _tokenizer.symbol() == '*'
-					|| _tokenizer.symbol() == '/' || _tokenizer.symbol() == '&' || _tokenizer.symbol() == '|'
-					|| _tokenizer.symbol() == '<' || _tokenizer.symbol() == '>' || _tokenizer.symbol() == '='))) {
-				
-				System.err.println("Error compiling op term!");
-				return;
-			}
-			String symbolString = getEscapedSymbol(_tokenizer.symbol());
-			_bw.write("<symbol> " + symbolString + " </symbol>\n");
-			
-			compileTerm();
-			
-			_tokenizer.advance();
-			if (!(_tokenizer.tokenType() == TokenType.SYMBOL
-					&& (_tokenizer.symbol() == '+' || _tokenizer.symbol() == '-' || _tokenizer.symbol() == '*'
-					|| _tokenizer.symbol() == '/' || _tokenizer.symbol() == '&' || _tokenizer.symbol() == '|'
-					|| _tokenizer.symbol() == '<' || _tokenizer.symbol() == '>' || _tokenizer.symbol() == '='))) {
-				
-				_tokenizer.retreat();
-				return;
-			}
-		}
-		while (true);
-	}
-	*/
-
-	private void compileOperator(char operator) throws IOException {
-		switch (operator) {
-		case '+':
-			_vw.writeArithmetic("add");
-			break;
-		case '-':
-			_vw.writeArithmetic("sub");
-			break;
-		case '*':
-			_vw.writeCall("Math.multiply", 2);
-			break;
-		case '/':
-			_vw.writeCall("Math.divide", 2);
-			break;
-		case '&':
-			_vw.writeArithmetic("and");
-			break;
-		case '|':
-			_vw.writeArithmetic("or");
-			break;
-		case '<':
-			_vw.writeArithmetic("lt");
-			break;
-		case '>':
-			_vw.writeArithmetic("gt");
-			break;
-		case '=':
-			_vw.writeArithmetic("eq");
-			break;
-		default:
-			System.err.println("Error: Invalid operator: " + operator);
-		}
-	}
-
 	public void compileTerm() throws IOException {
 		_bw.write("<term>\n");
 		

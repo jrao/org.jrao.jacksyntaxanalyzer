@@ -1061,7 +1061,7 @@ public class CompilationEngine {
 	private String segmentFromKind(Kind kind) {
 		switch (kind) {
 		case ARG:
-			return "arg";
+			return "argument";
 		case FIELD:
 			return "this";
 		case STATIC:

@@ -20,7 +20,7 @@ public class VMWriter {
 	public void writePush(String segment, int index) throws IOException {
 		switch (segment) {
 			case "constant":
-			case "arg":
+			case "argument":
 			case "local":
 			case "static":
 			case "this":
@@ -41,7 +41,7 @@ public class VMWriter {
 	public void writePop(String segment, int index) throws IOException {
 		switch (segment) {
 			case "const":
-			case "arg":
+			case "argument":
 			case "local":
 			case "static":
 			case "this":

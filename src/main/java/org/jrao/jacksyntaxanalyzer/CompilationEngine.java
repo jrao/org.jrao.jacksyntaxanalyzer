@@ -25,6 +25,9 @@ public class CompilationEngine {
 		_nextFieldNumber = 0;
 		_nextArgNumber = 0;
 		_nextVarNumber = 0;
+		
+		_ifLabelNumber = 0;
+		_whileLabelNumber = 0;
 	}
 	
 	public void close() throws IOException {
@@ -219,6 +222,7 @@ public class CompilationEngine {
 			return;
 		}
 		_bw.write("<identifier kind=\"subroutine\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+		_symbolTable.startSubroutine();
 		_currentSubroutine = _tokenizer.identifier();
 		
 		// Handle parameter list
@@ -617,22 +621,35 @@ public class CompilationEngine {
 
 	public void compileWhile() throws IOException {
 		_bw.write("<whileStatement>\n");
-
+		
 		eatKeyword(KeyWord.WHILE);
 		
+		String whileExpLabel = "WHILE_EXP" + String.valueOf(_whileLabelNumber);
+		String whileEndLabel = "WHILE_END" + String.valueOf(_whileLabelNumber);
+		_whileLabelNumber++;
+		
+		_vw.writeLabel(whileExpLabel);
+
 		eatSymbol('(');
 		
 		compileExpression();
+		
+		_vw.writeArithmetic("not");
+		_vw.writeIf(whileEndLabel);
 		
 		eatSymbol(')');
 		
 		eatSymbol('{');
 
 		compileStatements();
+		
+		_vw.writeGoto(whileExpLabel);
 
 		eatSymbol('}');
 
 		_bw.write("</whileStatement>\n");
+
+		_vw.writeLabel(whileEndLabel);
 	}
 	
 	public void compileReturn() throws IOException {
@@ -669,10 +686,19 @@ public class CompilationEngine {
 
 		eatKeyword(KeyWord.IF);
 
+		String ifTrueLabel = "IF_TRUE" + String.valueOf(_ifLabelNumber);
+		String ifFalseLabel = "IF_FALSE" + String.valueOf(_ifLabelNumber);
+		String ifEndLabel = "IF_END" + String.valueOf(_ifLabelNumber);
+		_ifLabelNumber++;
+		
 		eatSymbol('(');
 		
 		compileExpression();
 
+		_vw.writeIf(ifTrueLabel);
+		_vw.writeGoto(ifFalseLabel);
+		_vw.writeLabel(ifTrueLabel);
+		
 		eatSymbol(')');
 		
 		eatSymbol('{');
@@ -684,15 +710,22 @@ public class CompilationEngine {
 		_tokenizer.advance();
 		if (_tokenizer.tokenType().equals(TokenType.KEYWORD) && _tokenizer.keyWord() == KeyWord.ELSE) {
 			_bw.write("<keyword> else </keyword>\n");
+			
+			_vw.writeGoto(ifEndLabel);
+			_vw.writeLabel(ifFalseLabel);
 
 			eatSymbol('{');
 			
 			compileStatements();
 
 			eatSymbol('}');
+			
+			_vw.writeLabel(ifEndLabel);
 		}
 		else {
 			_tokenizer.retreat();
+
+			_vw.writeLabel(ifFalseLabel);
 		}
 		
 		_bw.write("</ifStatement>\n");
@@ -714,12 +747,13 @@ public class CompilationEngine {
 				break;
 			}
 			else {
+				char symbol = _tokenizer.symbol();
 				String symbolString = getEscapedSymbol(_tokenizer.symbol());
 				_bw.write("<symbol> " + symbolString + " </symbol>\n");
 				
 				compileTerm();
 				
-				compileOperator(symbolString.charAt(0));
+				compileOperator(symbol);
 			}
 		}
 		
@@ -777,6 +811,22 @@ public class CompilationEngine {
 				|| _tokenizer.keyWord() == KeyWord.NULL || _tokenizer.keyWord() == KeyWord.THIS)) {
 
 			_bw.write("<keyword> " + _tokenizer.keyWord().toString().toLowerCase() + " </keyword>\n");
+			
+			switch (_tokenizer.keyWord()) {
+			case TRUE:
+				_vw.writePush("constant", 0);
+				_vw.writeArithmetic("not");
+				break;
+			case FALSE:
+				_vw.writePush("constant", 0);
+				break;
+			case NULL:
+				break;
+			case THIS:
+				break;
+			default:
+				System.err.println("Error: Unreachable code!");
+			}
 		}
 		else if (_tokenizer.tokenType() == TokenType.IDENTIFIER) {
 			String varName = _tokenizer.identifier();
@@ -1036,5 +1086,8 @@ public class CompilationEngine {
 	private int _nextFieldNumber;
 	private int _nextArgNumber;
 	private int _nextVarNumber;
+	
+	private int _ifLabelNumber;
+	private int _whileLabelNumber;
 	
 }

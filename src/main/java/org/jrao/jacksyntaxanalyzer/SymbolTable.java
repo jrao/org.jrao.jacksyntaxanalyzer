@@ -20,6 +20,8 @@ public class SymbolTable {
 	 */
 	public void startSubroutine() {
 		_subroutineSymbolTable.clear();
+		_nextArgNumber = 0;
+		_nextVarNumber = 0;
 	}
 
 	/*

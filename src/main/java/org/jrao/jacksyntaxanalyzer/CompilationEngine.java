@@ -524,6 +524,7 @@ public class CompilationEngine {
 			System.err.println("Error compiling subroutine call!");
 		}
 		String varName = _tokenizer.identifier();
+		int nArgs = 0;
 
 		_tokenizer.advance();
 		if (!(_tokenizer.tokenType() == TokenType.SYMBOL && (_tokenizer.symbol() == '(' || _tokenizer.symbol() == '.'))) {
@@ -533,7 +534,7 @@ public class CompilationEngine {
 			_bw.write("<identifier kind=\"subroutine\" definition=\"false\"> " + varName + " </identifier>\n");
 			_bw.write("<symbol> " + '(' + " </symbol>\n");
 
-			int nArgs = compileExpressionList();
+			nArgs = compileExpressionList();
 
 			_vw.writeCall(varName, nArgs);
 			
@@ -543,6 +544,17 @@ public class CompilationEngine {
 			_bw.write("<identifier kind=\"class\" definition=\"false\"> " + varName + " </identifier>\n");
 			_bw.write("<symbol> " + '.' + " </symbol>\n");
 			String objectName = varName;
+			
+			String objectType = _symbolTable.typeOf(objectName);
+			if (!objectType.equals("")) {
+				nArgs = 1;
+				String segment = segmentFromKind(_symbolTable.kindOf(objectName));
+				int index = _symbolTable.indexOf(objectName);
+				_vw.writePush(segment, index);
+			}
+			else {
+				objectType = objectName;
+			}
 			
 			_tokenizer.advance();
 			if (!_tokenizer.tokenType().equals(TokenType.IDENTIFIER)) {
@@ -554,11 +566,11 @@ public class CompilationEngine {
 
 			eatSymbol('(');
 			
-			int nArgs = compileExpressionList();
+			nArgs += compileExpressionList();
 
 			eatSymbol(')');
 
-			_vw.writeCall(objectName + "." + subroutineName, nArgs);
+			_vw.writeCall(objectType + "." + subroutineName, nArgs);
 		}
 	}
 

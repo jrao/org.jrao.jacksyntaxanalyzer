@@ -183,7 +183,9 @@ public class CompilationEngine {
 		
 		_bw.write("<subroutineDec>\n");
 		
-		_bw.write("<keyword> " + _tokenizer.keyWord().toString().toLowerCase()  + " </keyword>\n");
+		String subroutineType = _tokenizer.keyWord().toString().toLowerCase();
+		
+		_bw.write("<keyword> " + subroutineType  + " </keyword>\n");
 		
 		// Handle return type
 		_tokenizer.advance();
@@ -232,7 +234,7 @@ public class CompilationEngine {
 
 		eatSymbol(')');
 		
-		compileSubroutineBody();
+		compileSubroutineBody(subroutineType);
 		
 		_bw.write("</subroutineDec>\n");
 		_currentSubroutine = "";
@@ -240,7 +242,7 @@ public class CompilationEngine {
 		compileSubroutine();
 	}
 	
-	private void compileSubroutineBody() throws IOException {
+	private void compileSubroutineBody(String subroutineType) throws IOException {
 		_bw.write("<subroutineBody>\n");
 		
 		eatSymbol('{');
@@ -248,6 +250,15 @@ public class CompilationEngine {
 		handleMultipleVariableDeclarations();
 
 		_vw.writeFunction(_currentClass + "." +_currentSubroutine, _symbolTable.varCount(Kind.VAR));
+		
+		if (subroutineType.equals("constructor")) {
+			_vw.writePush("constant", _symbolTable.varCount(Kind.FIELD));
+			_vw.writeCall("Memory.alloc", 1);
+			_vw.writePop("pointer", 0);
+		}
+		else if (subroutineType.equals("method")) {
+			// TODO
+		}
 		
 		compileStatements();
 
@@ -835,6 +846,7 @@ public class CompilationEngine {
 			case NULL:
 				break;
 			case THIS:
+				_vw.writePush("pointer", 0);
 				break;
 			default:
 				System.err.println("Error: Unreachable code!");

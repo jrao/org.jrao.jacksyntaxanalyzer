@@ -620,16 +620,20 @@ public class CompilationEngine {
 		
 		compileExpression();
 
+		String segment = segmentFromKind(kind);
+		if (segment.equals("")) {
+			System.err.println("Error: Can only assign values to argument, field, static, or local variables!");
+			return;
+		}
+
 		if (!squareBrackets) {
-			String segment = segmentFromKind(kind);
-			if (segment.equals("")) {
-				System.err.println("Error: Can only assign values to argument, field, static, or local variables!");
-				return;
-			}
 			_vw.writePop(segment, number);
 		}
 		else {
-			// TODO
+			_vw.writePop("temp", 0);
+			_vw.writePop("pointer", 1);
+			_vw.writePush("temp", 0);
+			_vw.writePop("that", 0);
 		}
 
 		// handle ;
@@ -889,6 +893,11 @@ public class CompilationEngine {
 				_bw.write("<symbol> " + '[' + " </symbol>\n");
 				
 				compileExpression();
+				
+				_vw.writePush(segmentFromKind(kind), number);
+				_vw.writeArithmetic("add");
+				_vw.writePop("pointer", 1);
+				_vw.writePush("that", 0);
 
 				eatSymbol(']');
 			}

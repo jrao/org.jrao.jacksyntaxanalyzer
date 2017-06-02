@@ -224,8 +224,11 @@ public class CompilationEngine {
 			return;
 		}
 		_bw.write("<identifier kind=\"subroutine\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
-		_symbolTable.startSubroutine();
 		_currentSubroutine = _tokenizer.identifier();
+		_symbolTable.startSubroutine();
+		if (subroutineType.equals("method")) {
+			_symbolTable.define("this", _currentClass, Kind.ARG);
+		}
 		
 		// Handle parameter list
 		eatSymbol('(');

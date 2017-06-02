@@ -224,6 +224,7 @@ public class CompilationEngine {
 			return;
 		}
 		_bw.write("<identifier kind=\"subroutine\" definition=\"true\"> " + _tokenizer.identifier()  + " </identifier>\n");
+
 		_currentSubroutine = _tokenizer.identifier();
 		_symbolTable.startSubroutine();
 		if (subroutineType.equals("method")) {
@@ -919,6 +920,9 @@ public class CompilationEngine {
 					Kind kind = _symbolTable.kindOf(varName);
 					String type = _symbolTable.typeOf(varName);
 					int number = _symbolTable.indexOf(varName);
+					
+					int nArgs = 0;
+					boolean methodCall = false;
 
 					String className = "";
 					if (kind == Kind.NONE) {
@@ -930,6 +934,8 @@ public class CompilationEngine {
 						// Object function (method) call
 						_bw.write("<identifier kind=\"" + kind.toString().toLowerCase() + "\" number=\"" + number + "\" definition=\"false\" type=\"" + type + "\"> " + varName  + " </identifier>\n");
 						className = _symbolTable.typeOf(varName);
+						nArgs = 1;
+						methodCall = true;
 					}
 					_bw.write("<symbol> " + '.' + " </symbol>\n");
 					
@@ -943,7 +949,10 @@ public class CompilationEngine {
 
 					eatSymbol('(');
 					
-					int nArgs = compileExpressionList();
+					nArgs += compileExpressionList();
+					if (methodCall) {
+						_vw.writePush(segmentFromKind(kind), number);
+					}
 					_vw.writeCall(className + "." + subroutineName, nArgs);
 
 					eatSymbol(')');

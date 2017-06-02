@@ -834,6 +834,15 @@ public class CompilationEngine {
 		}
 		else if (_tokenizer.tokenType() == TokenType.STRING_CONST) {
 			_bw.write("<stringConstant> " + _tokenizer.stringVal() + " </stringConstant>\n");
+
+			String stringVal = _tokenizer.stringVal();
+			_vw.writePush("constant", stringVal.length());
+			_vw.writeCall("String.new", 1);
+			for (int i = 0; i < stringVal.length(); i++) {
+				int asciiVal = (int) stringVal.charAt(i);
+				_vw.writePush("constant", asciiVal);
+				_vw.writeCall("String.appendChar", 2);
+			}
 		}
 		else if (_tokenizer.tokenType() == TokenType.KEYWORD
 				&& (_tokenizer.keyWord() == KeyWord.TRUE || _tokenizer.keyWord() == KeyWord.FALSE

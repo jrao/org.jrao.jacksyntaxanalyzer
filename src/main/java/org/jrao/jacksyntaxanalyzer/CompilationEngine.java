@@ -850,6 +850,7 @@ public class CompilationEngine {
 				_vw.writePush("constant", 0);
 				break;
 			case NULL:
+				_vw.writePush("constant", 0);
 				break;
 			case THIS:
 				_vw.writePush("pointer", 0);

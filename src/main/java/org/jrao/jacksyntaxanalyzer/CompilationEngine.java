@@ -610,6 +610,11 @@ public class CompilationEngine {
 		
 		boolean squareBrackets = handleOptionalExpressionInSquareBrackets();
 		
+		if (squareBrackets) {
+			_vw.writePush(segmentFromKind(kind), number);
+			_vw.writeArithmetic("add");
+		}
+		
 		// handle =
 		eatSymbol('=');
 		
@@ -622,6 +627,9 @@ public class CompilationEngine {
 				return;
 			}
 			_vw.writePop(segment, number);
+		}
+		else {
+			// TODO
 		}
 
 		// handle ;
@@ -876,6 +884,7 @@ public class CompilationEngine {
 				Kind kind = _symbolTable.kindOf(varName);
 				String type = _symbolTable.typeOf(varName);
 				int number = _symbolTable.indexOf(varName);
+
 				_bw.write("<identifier kind=\"" + kind.toString().toLowerCase() + "\" number=\"" + number + "\" definition=\"false\" type=\"" + type + "\"> " + varName  + " </identifier>\n");
 				_bw.write("<symbol> " + '[' + " </symbol>\n");
 				

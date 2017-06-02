@@ -543,12 +543,15 @@ public class CompilationEngine {
 			System.err.println("Error compiling subroutine call!");
 		}
 		if (_tokenizer.tokenType() == TokenType.SYMBOL && _tokenizer.symbol() == '(') {
+			// No object or class specified means that this is an implicit method call on "this" object
 			_bw.write("<identifier kind=\"subroutine\" definition=\"false\"> " + varName + " </identifier>\n");
 			_bw.write("<symbol> " + '(' + " </symbol>\n");
+			
+			_vw.writePush("pointer", 0);
 
-			nArgs = compileExpressionList();
+			nArgs = compileExpressionList() + 1;
 
-			_vw.writeCall(varName, nArgs);
+			_vw.writeCall(_currentClass + "." + varName, nArgs);
 			
 			eatSymbol(')');
 		}
@@ -559,12 +562,14 @@ public class CompilationEngine {
 			
 			String objectType = _symbolTable.typeOf(objectName);
 			if (!objectType.equals("")) {
+				// This is an explicit method method on a specified object
 				nArgs = 1;
 				String segment = segmentFromKind(_symbolTable.kindOf(objectName));
 				int index = _symbolTable.indexOf(objectName);
 				_vw.writePush(segment, index);
 			}
 			else {
+				// This is a static function call where both the class and function are specified
 				objectType = objectName;
 			}
 			

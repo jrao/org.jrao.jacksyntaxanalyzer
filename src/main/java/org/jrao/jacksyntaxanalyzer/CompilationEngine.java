@@ -257,7 +257,8 @@ public class CompilationEngine {
 			_vw.writePop("pointer", 0);
 		}
 		else if (subroutineType.equals("method")) {
-			// TODO
+			_vw.writePush("argument", 0);
+			_vw.writePop("pointer", 0);
 		}
 		
 		compileStatements();

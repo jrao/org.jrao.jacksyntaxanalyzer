@@ -327,12 +327,13 @@ public class JackTokenizer {
 	private void populateTokenList() {
 		_tokenList = new ArrayList<String>();
 		
-		String keywordRegex = "class|constructor|function|method|field|static|var|int|char|boolean|void|true|false|null|this|let|do|if|else|while|return";
+		//String keywordRegex = "class|constructor|function|method|field|static|var|int|char|boolean|void|true|false|null|this|let|do|if|else|while|return";
 		String symbolRegex = "[\\{\\}\\(\\)\\[\\]\\.,;\\+\\-\\*/&\\|\\<\\>\\=~]";
 		String intConstRegex = "[0-9]+";
 		String strConstRegex = "\".*\"";
 		String identifierRegex = "[a-zA-Z_][a-zA-Z0-9_]*";
-		String regex = keywordRegex + "|" + symbolRegex + "|" + intConstRegex + "|" + strConstRegex + "|" + identifierRegex;
+		//String regex = keywordRegex + "|" + symbolRegex + "|" + intConstRegex + "|" + strConstRegex + "|" + identifierRegex;
+		String regex = symbolRegex + "|" + intConstRegex + "|" + strConstRegex + "|" + identifierRegex;
 		
 		Pattern pattern = Pattern.compile(regex);
 		Matcher matcher = pattern.matcher(_input);
